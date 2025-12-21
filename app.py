@@ -45,7 +45,18 @@ Debes responder ÚNICAMENTE con un JSON válido con esta estructura exacta, sin 
 def consultar_ia(api_key, vehiculo, pieza, parte):
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash') # Modelo rápido y eficiente
+        # Configuración para saltar bloqueos de seguridad
+safety_settings = [
+    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+]
+
+model = genai.GenerativeModel(
+    model_name='gemini-1.5-flash',
+    safety_settings=safety_settings
+) # Modelo rápido y eficiente
         
         consulta = f"""
         SOLICITUD DE COTIZACIÓN:
