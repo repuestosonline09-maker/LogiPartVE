@@ -45,7 +45,7 @@ Debes responder ÚNICAMENTE con un JSON válido con esta estructura exacta, sin 
 def consultar_ia(api_key, vehiculo, pieza, parte):
     try:
         genai.configure(api_key=api_key, transport='rest')
-        model = genai.GenerativeModel('gemini-1.5-flash') # Modelo rápido y eficiente
+        model = genai.GenerativeModel(model_name='models/gemini-1.5-flash') # Modelo rápido y eficiente
         
         consulta = f"""
         SOLICITUD DE COTIZACIÓN:
