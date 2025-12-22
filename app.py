@@ -2,100 +2,85 @@ import streamlit as st
 import google.generativeai as genai
 import re
 
-# Configuración de la página
-st.set_page_config(page_title="Cotizador Logístico", layout="wide")
+# 1. Configuración de pantalla
+st.set_page_config(page_title="LogiParts AI", layout="wide")
 
-# Estilos CSS
+# 2. Estilos visuales
 st.markdown("""
     <style>
-    .main { background-color: #f5f7f9; }
-    .stButton>button { width: 100%; background-color: #007bff; color: white; }
-    .card-aereo { padding: 20px; border-radius: 10px; background-color: #e3f2fd; border-left: 5px solid #1976d2; }
-    .card-maritimo { padding: 20px; border-radius: 10px; background-color: #e8f5e9; border-left: 5px solid #388e3c; }
+    .card-aereo { padding: 20px; border-radius: 10px; background-color: #e3f2fd; border-left: 5px solid #1976d2; color: #1565c0; }
+    .card-maritimo { padding: 20px; border-radius: 10px; background-color: #e8f5e9; border-left: 5px solid #388e3c; color: #2e7d32; }
     </style>
 """, unsafe_allow_html=True)
-# Sidebar para configuración
+
+# 3. Sidebar y Conexión (Usa tu llave de Colombia aquí)
 with st.sidebar:
     st.header("⚙️ Configuración")
     admin_pass = st.text_input("Contraseña Admin", type="password")
+    api_key = ""
     if admin_pass == "admin123":
-        api_key = st.text_input("Google API Key", type="password")
+        api_key = st.text_input("Google API Key (Colombia)", type="password")
         if api_key:
+            # Forzamos transporte REST para evitar el error 404 de v1beta
             genai.configure(api_key=api_key, transport='rest')
-            st.success("API Conectada")
+            st.success("✅ Conexión Exitosa")
 
-st.title("📦 Cotizador de Repuestos Internacional")
+st.title("📦 Cotizador Inteligente LogiParts")
 
-# Formulario principal
+# 4. Formulario
 col1, col2, col3 = st.columns(3)
 with col1:
-    vehiculo = st.text_input("Vehículo (Año/Marca/Modelo)", placeholder="Ej: 1985 Ford Granada")
+    vehiculo = st.text_input("Vehículo", placeholder="Ej: 1985 Ford Granada")
 with col2:
-    repuesto = st.text_input("Nombre del Repuesto", placeholder="Ej: Motor de arranque")
+    repuesto = st.text_input("Pieza", placeholder="Ej: Motor de arranque")
 with col3:
-    nro_parte = st.text_input("N° de Parte (Opcional)", placeholder="Ej: 3361031")
+    nro_parte = st.text_input("N° Parte", placeholder="Ej: 3361031")
 
+# 5. Lógica de Cotización
 if st.button("COTIZAR AHORA"):
     if not api_key:
-        st.error("Por favor, ingresa la API Key en el panel lateral.")
+        st.error("⚠️ Ingresa la API Key en el panel lateral")
     else:
         try:
-            # Configuración de seguridad y modelo
-            safety_settings = [
-                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-            ]
-            
-            # Usamos el nombre técnico completo para que no se pierda
-model = genai.GenerativeModel(model_name='models/gemini-1.5-flash-latest')
+            # Usamos el nombre del modelo más estable
+            model = genai.GenerativeModel('gemini-1.5-flash-latest')
             
             prompt = f"""
-            Analiza el repuesto para: {vehiculo}, Pieza: {repuesto}, N°: {nro_parte}.
-            Responde ÚNICAMENTE en este formato exacto:
-            ANÁLISIS: (Descripción técnica)
-            PESO_ESTIMADO: (Número)
-            PRECIO_REPUESTO: (Número)
-            AÉREO_COSTO: (Número)
+            Analiza: {vehiculo}, Pieza: {repuesto}, N°: {nro_parte}.
+            Responde ÚNICAMENTE en este formato:
+            ANÁLISIS: (Breve descripción técnica)
+            PESO_ESTIMADO: (Número en lb)
+            PRECIO_REPUESTO: (Número en USD)
+            AÉREO_COSTO: (Número en USD)
             AÉREO_DIAS: (Días)
-            MARÍTIMO_COSTO: (Número)
+            MARÍTIMO_COSTO: (Número en USD)
             MARÍTIMO_DIAS: (Días)
             ADUANA: (Porcentaje)
             """
             
             response = model.generate_content(prompt)
-            texto = response.text
+            res_text = response.text
             
-            # Extraer datos con Regex
-            def extraer(patron, texto):
-                resultado = re.search(patron, texto)
-                return resultado.group(1) if resultado else "N/A"
+            # Función para extraer datos
+            def buscar(tag, texto):
+                match = re.search(f"{tag}: (.*)", texto)
+                return match.group(1) if match else "N/D"
 
-            # Mostrar resultados en tarjetas
-            st.info(f"🔍 **Análisis Técnico:** {extraer(r'ANÁLISIS: (.*)', texto)}")
+            st.info(f"🔍 **Análisis:** {buscar('ANÁLISIS', res_text)}")
             
-            c1, c2 = st.columns(2)
-            with c1:
-                st.markdown(f"""
-                <div class="card-aereo">
-                    <h3>✈️ Envío Aéreo</h3>
-                    <p><b>Costo Total:</b> ${extraer(r'AÉREO_COSTO: (.*)', texto)} USD</p>
-                    <p><b>Tiempo:</b> {extraer(r'AÉREO_DIAS: (.*)', texto)}</p>
-                    <small>Peso est: {extraer(r'PESO_ESTIMADO: (.*)', texto)} lb</small>
-                </div>
-                """, unsafe_allow_html=True)
-                
-            with c2:
-                st.markdown(f"""
-                <div class="card-maritimo">
-                    <h3>🚢 Envío Marítimo</h3>
-                    <p><b>Costo Total:</b> ${extraer(r'MARÍTIMO_COSTO: (.*)', texto)} USD</p>
-                    <p><b>Tiempo:</b> {extraer(r'MARÍTIMO_DIAS: (.*)', texto)}</p>
-                    <p><small>Aduana: {extraer(r'ADUANA: (.*)', texto)}</small></p>
-                </div>
-                """, unsafe_allow_html=True)
+            ca, cm = st.columns(2)
+            with ca:
+                st.markdown(f"""<div class="card-aereo"><h3>✈️ Aéreo</h3>
+                <p><b>Total:</b> ${buscar('AÉREO_COSTO', res_text)}</p>
+                <p><b>Tiempo:</b> {buscar('AÉREO_DIAS', res_text)}</p>
+                <small>Peso: {buscar('PESO_ESTIMADO', res_text)}</small></div>""", unsafe_allow_html=True)
+            with cm:
+                st.markdown(f"""<div class="card-maritimo"><h3>🚢 Marítimo</h3>
+                <p><b>Total:</b> ${buscar('MARÍTIMO_COSTO', res_text)}</p>
+                <p><b>Tiempo:</b> {buscar('MARÍTIMO_DIAS', res_text)}</p>
+                <small>Impuesto: {buscar('ADUANA', res_text)}</small></div>""", unsafe_allow_html=True)
+            
+            st.balloons()
 
         except Exception as e:
-            st.error(f"Error de conexión: Verifica que tu API Key sea válida y no tenga restricciones regionales.")
-            st.write(e)
+            st.error(f"Error de sistema: {e}")
