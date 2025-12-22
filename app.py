@@ -77,7 +77,7 @@ if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN", type="primary"):
                     st.session_state.resultado_ia = res.json()['candidates'][0]['content']['parts'][0]['text']
                 else:
                     # Si el modelo flash falla, intentamos con el pro como respaldo
-                    url_back = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={API_KEY}"
+                    url_back = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-lite:generateContent?key={API_KEY}"
                     res_back = requests.post(url_back, json={"contents": [{"parts": [{"text": prompt}]}]})
                     if res_back.status_code == 200:
                         st.session_state.resultado_ia = res_back.json()['candidates'][0]['content']['parts'][0]['text']
