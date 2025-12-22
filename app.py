@@ -10,7 +10,7 @@ st.set_page_config(page_title="LogiPartVE Pro", layout="wide", page_icon="✈️
 try:
     API_KEY = st.secrets["GOOGLE_API_KEY"]
     PASS_ADMIN = st.secrets["ADMIN_PASSWORD"]
-except:
+except Exception:
     st.error("⚠️ Error: Configure 'Secrets' en Streamlit con GOOGLE_API_KEY y ADMIN_PASSWORD.")
     st.stop()
 
@@ -58,21 +58,54 @@ with st.container():
     with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
     with col5: t_in = st.selectbox("Tipo de Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 6. LÓGICA DE IA (NIVEL DE PAGO 1 - VERSIÓN V1 ESTABLE)
+# 6. LÓGICA DE IA (NIVEL DE PAGO 1)
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary"):
     if v_in and r_in and n_in:
-        # Uso de la versión v1 estable para evitar el Error 404
+        # Usamos v1 para estabilidad en Nivel de Pago
         url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={API_KEY}"
-        url_back = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key={API_KEY}"
         
         prompt = f"""
-        ACTÚA COMO EXPERTO LOGÍSTICO DE LogiPartVE. 
-        1. ANÁLISIS TÉCNICO: Referencia {n_in} para {r_in} en vehículo {v_in}. Estima peso/medidas.
-        2. COSTOS {o_in.upper()}: MIA Aé ${st.session_state.tarifas['mia_a']}, Mar ${st.session_state.tarifas['mia_m']} | MAD Aé ${st.session_state.tarifas['mad']}.
-        3. STATUS RUTA: Alertas aduanas Venezuela Diciembre 2025.
+        EXPERTO LOGÍSTICO LogiPartVE. 
+        1. ANÁLISIS TÉCNICO: Parte {n_in} para {r_in} en {v_in}. Estima dimensiones OEM.
+        2. COSTOS {o_in.upper()}: Tarifas MIA Aé ${st.session_state.tarifas['mia_a']}, Mar ${st.session_state.tarifas['mia_m']} | MAD Aé ${st.session_state.tarifas['mad']}.
+        3. STATUS RUTA: Alertas aduana Venezuela Diciembre 2025.
         """
 
-        with st.spinner('Conectando con servidores premium...'):
+        with st.spinner('Procesando con prioridad de pago...'):
             try:
                 res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=30)
-                if res.status_code ==
+                if res.status_code == 200:
+                    st.session_state.resultado_ia = res.json()['candidates'][0]['content']['parts'][0]['text']
+                else:
+                    error_msg = res.json().get('error', {}).get('message', 'Error desconocido')
+                    st.error(f"⚠️ Error de la API (Código {res.status_code}): {error_msg}")
+            except Exception as e:
+                st.error(f"❌ Error de conexión: {str(e)}")
+    else:
+        st.warning("Por favor, rellene todos los campos.")
+
+# 7. RESULTADOS
+if st.session_state.resultado_ia:
+    st.markdown("### 📝 Análisis Logístico Generado")
+    st.markdown(f'<div class="report-container">{st.session_state.resultado_ia}</div>', unsafe_allow_html=True)
+    
+    if st.button("🗑️ LIMPIAR"):
+        st.session_state.count += 1
+        st.session_state.resultado_ia = ""
+        st.rerun()
+
+# 8. CALCULADORA MANUAL
+st.markdown('<div class="manual-table">', unsafe_allow_html=True)
+st.markdown("### 📊 Validación Manual de Costos")
+mc1, mc2, mc3, mc4 = st.columns(4)
+with mc1: l_cm = st.number_input("Largo (cm)", min_value=0.0, key="ml")
+with mc2: an_cm = st.number_input("Ancho (cm)", min_value=0.0, key="man")
+with mc3: al_cm = st.number_input("Alto (cm)", min_value=0.0, key="mal")
+with mc4: p_kg = st.number_input("Peso (kg)", min_value=0.0, key="mp")
+
+if st.button("🧮 CALCULAR MANUAL"):
+    p_vol_kg = (l_cm * an_cm * al_cm) / 5000
+    p_final_kg = max(p_kg, p_vol_kg)
+    costo_base = p_final_kg * st.session_state.tarifas["mia_a"]
+    st.success(f"**Costo Estimado Base: ${costo_base:.2f} USD**")
+st.markdown('</div>', unsafe_allow_html=True)
