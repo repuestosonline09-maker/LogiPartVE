@@ -13,8 +13,7 @@ st.markdown("""
     .card-aereo { padding: 20px; border-radius: 10px; background-color: #e3f2fd; border-left: 5px solid #1976d2; }
     .card-maritimo { padding: 20px; border-radius: 10px; background-color: #e8f5e9; border-left: 5px solid #388e3c; }
     </style>
-""", unsafe_allow_items=True)
-
+""", unsafe_allow_html=True)
 # Sidebar para configuración
 with st.sidebar:
     st.header("⚙️ Configuración")
