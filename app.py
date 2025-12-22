@@ -5,101 +5,87 @@ import json
 # 1. Configuración de página
 st.set_page_config(page_title="LogiPartVE AI Pro", layout="wide", page_icon="🚛")
 
-# Inicialización de estados necesarios
+# Carga de Secretos Seguros
+try:
+    API_KEY = st.secrets["GOOGLE_API_KEY"]
+    PASS_ADMIN = st.secrets["ADMIN_PASSWORD"]
+except:
+    st.error("⚠️ Error: Configura los Secrets en Streamlit Cloud (GOOGLE_API_KEY y ADMIN_PASSWORD)")
+    st.stop()
+
+# Inicialización de estados
 if 'resultado_ia' not in st.session_state:
     st.session_state.resultado_ia = ""
-# Usamos un contador para forzar el reinicio de los widgets
 if 'count' not in st.session_state:
     st.session_state.count = 0
+if 'tarifas' not in st.session_state:
+    st.session_state.tarifas = {"mia_a": 9.0, "mia_m": 40.0, "mad": 20.0}
 
-# 2. Estética LogiPartVE
+# 2. Estética
 st.markdown("""
     <style>
-    .report-container { 
-        padding: 20px; border-radius: 12px; background-color: #ffffff; 
-        border: 2px solid #007bff; color: #1a1a1a; white-space: pre-wrap;
-    }
-    .stButton>button { border-radius: 8px; height: 3.5em; font-weight: bold; }
+    .report-container { padding: 20px; border-radius: 12px; border: 2px solid #007bff; white-space: pre-wrap; background-color: #f9f9f9; }
+    .stButton>button { border-radius: 8px; font-weight: bold; }
     </style>
 """, unsafe_allow_html=True)
 
-# 3. Sidebar: Panel Administrativo
+# 3. Sidebar Administrativo
 with st.sidebar:
-    st.header("🔐 Admin LogiPartVE")
-    admin_pass = st.text_input("Contraseña", type="password")
-    api_key, t_aereo_mia, t_mar_mia, t_mad = "", 9.0, 40.0, 20.0
-    if admin_pass == "admin123":
-        api_key = st.text_input("Google API Key", type="password")
-        t_aereo_mia = st.number_input("MIA Aéreo ($/lb)", value=9.0)
-        t_mar_mia = st.number_input("MIA Marítimo ($/ft³)", value=40.0)
-        t_mad = st.number_input("MAD Aéreo ($/kg)", value=20.0)
+    st.header("🔐 Panel LogiPartVE")
+    check_pass = st.text_input("Acceso Admin", type="password")
+    if check_pass == PASS_ADMIN:
+        st.success("Modo Admin Activo")
+        st.session_state.tarifas["mia_a"] = st.number_input("MIA Aéreo ($/lb)", value=st.session_state.tarifas["mia_a"])
+        st.session_state.tarifas["mia_m"] = st.number_input("MIA Marítimo ($/ft³)", value=st.session_state.tarifas["mia_m"])
+        st.session_state.tarifas["mad"] = st.number_input("MAD Aéreo ($/kg)", value=st.session_state.tarifas["mad"])
+    else:
+        st.info("Vendedores: No necesitan ingresar clave para cotizar.")
 
-# 4. Interfaz de Usuario
-st.title("🚛 LogiPartVE AI: Auditoría Técnica y Logística")
+# 4. Interfaz del Vendedor
+st.title("🚛 LogiPartVE AI: Cotizador Express")
 
-# Usamos la técnica de "key dinámica" basada en st.session_state.count para limpiar
-with st.container():
-    c1, c2 = st.columns(2)
-    with c1:
-        v_in = st.text_input("🚙 Vehículo (Marca, Modelo, Año, Cilindrada)", 
-                             placeholder="Ej: Ford Explorer 2017 3.5L EcoBoost", 
-                             key=f"v_field_{st.session_state.count}")
-        r_in = st.text_input("🔧 Nombre del Repuesto", 
-                             placeholder="Ej: Airbag o Amortiguadores", 
-                             key=f"r_field_{st.session_state.count}")
-    with c2:
-        n_in = st.text_input("🏷️ NÚMERO DE PARTE", 
-                             placeholder="Ej: GB5Z-78043B13-B", 
-                             key=f"n_field_{st.session_state.count}")
-        o_in = st.selectbox("📍 ORIGEN DEL REPUESTO", 
-                            ["Miami", "Madrid"], 
-                            key=f"o_field_{st.session_state.count}")
+c1, c2 = st.columns(2)
+with c1:
+    v_in = st.text_input("🚙 Vehículo (Marca, Modelo, Año, Cilindrada)", key=f"v_{st.session_state.count}")
+    r_in = st.text_input("🔧 Repuesto", key=f"r_{st.session_state.count}")
+with c2:
+    n_in = st.text_input("🏷️ N° DE PARTE", key=f"n_{st.session_state.count}")
+    o_in = st.selectbox("📍 ORIGEN", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
 
 # 5. Lógica de Petición
-c_btn1, c_btn2, c_btn3 = st.columns([3, 1, 1])
-
-with c_btn1:
-    if st.button("🚀 VALIDAR Y COTIZAR", type="primary"):
-        if not api_key: st.error("⚠️ Configure la API Key en el Panel Lateral.")
-        elif not v_in or not r_in or not n_in: st.warning("⚠️ Todos los campos son obligatorios.")
+col_b1, col_b2 = st.columns([4,1])
+with col_b1:
+    if st.button("🚀 GENERAR COTIZACIÓN", type="primary"):
+        if not v_in or not r_in or not n_in:
+            st.warning("⚠️ Complete todos los campos.")
         else:
             try:
-                list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
-                modelos = [m['name'] for m in requests.get(list_url).json().get('models', []) if 'generateContent' in m.get('supportedGenerationMethods', [])]
-                url = f"https://generativelanguage.googleapis.com/v1beta/{modelos[0]}:generateContent?key={api_key}"
+                # Detección de modelo
+                url_m = f"https://generativelanguage.googleapis.com/v1beta/models?key={API_KEY}"
+                modelos = [m['name'] for m in requests.get(url_m).json().get('models', []) if 'generateContent' in m.get('supportedGenerationMethods', [])]
+                url = f"https://generativelanguage.googleapis.com/v1beta/{modelos[0]}:generateContent?key={API_KEY}"
 
                 prompt = f"""
-                ERES EL EXPERTO TÉCNICO Y LOGÍSTICO DE LogiPartVE.
-                1. VALIDACIÓN TÉCNICA: Verifica compatibilidad de N° {n_in} para {r_in} en {v_in}.
-                2. LOGÍSTICA DE {o_in}: Aplica factor de seguridad (sobremedida del 15-20%). MIA: $9/lb, $40/ft³ | MAD: $20/kg.
-                3. ALERTAS DE NOTICIAS REAL-TIME: Analiza noticias mundiales y regionales (huelgas, clima, aduanas) que afecten envíos a Venezuela HOY.
-                4. RECOMENDACIÓN DE EMBALAJE: Según fragilidad.
-                Respuesta corta y profesional. Si no sabes peso/medida, di 'NO LO SÉ'.
+                ERES EL EXPERTO TÉCNICO DE LogiPartVE.
+                1. VALIDA: N° {n_in} para {r_in} en {v_in}.
+                2. LOGÍSTICA {o_in}: Sobredimensión 20%. Tarifas: MIA Aéreo ${st.session_state.tarifas['mia_a']}, Marítimo ${st.session_state.tarifas['mia_m']} | MAD Aéreo ${st.session_state.tarifas['mad']}.
+                3. ALERTAS: Reporta noticias de retrasos, clima o aduanas actuales para {o_in} y Venezuela.
+                Resumen corto, profesional y cuadro de embalaje.
                 """
+                
+                with st.spinner('⏳ Validando y analizando logística...'):
+                    res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]})
+                    st.session_state.resultado_ia = res.json()['candidates'][0]['content']['parts'][0]['text']
+            except Exception as e:
+                st.error(f"Error técnico: {e}")
 
-                with st.spinner('🔍 Analizando pieza y situación global...'):
-                    response = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]})
-                    st.session_state.resultado_ia = response.json()['candidates'][0]['content']['parts'][0]['text']
-            except: st.error("Error al conectar con la inteligencia logística.")
-
-with c_btn2:
+with col_b2:
     if st.button("🗑️ LIMPIAR"):
-        # Aumentamos el contador: esto hace que Streamlit crea que son widgets nuevos y los limpie
         st.session_state.count += 1
         st.session_state.resultado_ia = ""
         st.rerun()
 
-with c_btn3:
-    if st.session_state.resultado_ia:
-        st.download_button("📥 EXPORTAR", st.session_state.resultado_ia, file_name="cotizacion_LogiPartVE.txt")
-
-# 6. Despliegue de Resultados
+# 6. Despliegue
 if st.session_state.resultado_ia:
     st.markdown("---")
     st.markdown(f'<div class="report-container">{st.session_state.resultado_ia}</div>', unsafe_allow_html=True)
-    
-    if any(word in st.session_state.resultado_ia.upper() for word in ["NO SE PUEDE", "PROHIBIDO", "RETRASO", "HUELGA"]):
-        st.warning("🚨 Revisar sección de ALERTAS LOGÍSTICAS antes de confirmar al cliente.")
-
-st.divider()
-st.caption("LogiPartVE AI v4.1 | Auditoría de Seguridad y Logística")
