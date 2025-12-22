@@ -13,6 +13,7 @@ st.markdown("""
         background-color: #f8f9fa; 
         border: 1px solid #dee2e6; 
         color: #1a1a1a;
+        white-space: pre-wrap;
     }
     .stButton>button { 
         width: 100%; 
@@ -32,53 +33,65 @@ with st.sidebar:
     api_key = ""
     if admin_pass == "admin123":
         api_key = st.text_input("Pega tu API Key", type="password")
+        if api_key:
+            st.success("✅ API Key detectada")
 
 st.title("📦 Cotizador Inteligente LogiParts")
 
 # 3. Formulario
 col1, col2, col3 = st.columns(3)
 with col1:
-    vehiculo = st.text_input("🚙 Vehículo")
+    vehiculo = st.text_input("🚙 Vehículo", placeholder="Ej: Toyota Hilux 2022")
 with col2:
-    repuesto = st.text_input("🔧 Pieza")
+    repuesto = st.text_input("🔧 Pieza", placeholder="Ej: Amortiguadores")
 with col3:
-    nro_parte = st.text_input("🏷️ N° Parte")
+    nro_parte = st.text_input("🏷️ N° Parte", placeholder="Opcional")
 
-# 4. Lógica corregida sin errores de sintaxis
+# 4. Lógica de conexión
 if st.button("GENERAR COTIZACIÓN AHORA"):
     if not api_key:
-        st.error("⚠️ Falta la API Key en el panel lateral.")
+        st.error("⚠️ Ingresa la API Key en el panel lateral.")
     elif not vehiculo or not repuesto:
-        st.warning("⚠️ Completa Vehículo y Pieza.")
+        st.warning("⚠️ Los campos Vehículo y Pieza son obligatorios.")
     else:
         try:
-            # URL usando gemini-1.5-flash-8b que es el que tu llave permite
-            url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-8b:generateContent?key={api_key}"
+            # USAMOS V1BETA Y EL MODELO FLASH ESTÁNDAR (Alias más compatible)
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
             
             payload = {
                 "contents": [{
                     "parts": [{
-                        "text": f"Experto en logística: Cotiza para Venezuela. Vehículo: {vehiculo}, Pieza: {repuesto}, Nro: {nro_parte}. Incluye descripción, peso lb, precio USD y envío Aéreo vs Marítimo."
+                        "text": f"Eres un experto en logística. Crea una cotización para enviar a Venezuela: Vehículo {vehiculo}, Pieza {repuesto}, N° Parte {nro_parte}. Incluye peso estimado, precio en USD y comparación Aéreo vs Marítimo."
                     }]
                 }]
             }
             
             headers = {'Content-Type': 'application/json'}
             
-            with st.spinner('⏳ Consultando IA...'):
+            with st.spinner('⏳ Conectando con Google AI...'):
                 response = requests.post(url, headers=headers, json=payload)
                 resultado = response.json()
                 
             if response.status_code == 200:
                 texto_ia = resultado['candidates'][0]['content']['parts'][0]['text']
-                st.markdown("### 📋 Resultado")
+                st.markdown("---")
+                st.markdown("### 📋 Resultado de la Cotización")
                 st.markdown(f'<div class="report-container">{texto_ia}</div>', unsafe_allow_html=True)
                 st.balloons()
             else:
-                # Aquí estaba el error de sintaxis, ahora está corregido:
-                error_info = resultado.get('error', {})
-                mensaje = error_info.get('message', 'Error desconocido')
-                st.error(f"Error de Google: {mensaje}")
+                # Si falla, mostramos el error exacto para diagnosticar
+                error_msg = resultado.get('error', {}).get('message', 'Error desconocido')
+                st.error(f"Error de Google: {error_msg}")
+                
+                # RECURSO DE EMERGENCIA: Si el anterior falla, intentamos con el alias 'latest'
+                st.info("Intentando conexión alternativa...")
+                url_alt = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
+                response_alt = requests.post(url_alt, headers=headers, json=payload)
+                if response_alt.status_code == 200:
+                    st.success("Conexión alternativa exitosa. Por favor, refresca la página.")
                 
         except Exception as e:
-            st.error(f"Error de sistema: {str(e)}")
+            st.error(f"Error de red: {str(e)}")
+
+st.markdown("---")
+st.caption("LogiParts AI - v1.2 (Compatibilidad Forzada)")
