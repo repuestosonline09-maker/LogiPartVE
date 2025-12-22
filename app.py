@@ -54,21 +54,16 @@ safety_settings = [
 ]
 
 model = genai.GenerativeModel(
-    model_name='gemini-1.5-flash',
-    safety_settings=safety_settings
-) # Modelo rápido y eficiente
-        
-        consulta = f"""
-        SOLICITUD DE COTIZACIÓN:
-        - Vehículo: {vehiculo}
-        - Pieza: {pieza}
-        - Número de Parte (Input): {parte}
-        
-        Analiza, valida y genera el JSON de dimensiones de envío.
-        """
-        
-        response = model.generate_content(SYSTEM_PROMPT + consulta)
-        
+    Analiza el repuesto para: {vehiculo}, Pieza: {repuesto}, N°: {nro_parte}.
+        Responde ÚNICAMENTE en este formato exacto, sin saludos ni texto extra:
+        ANÁLISIS: (Descripción técnica breve)
+        PESO_ESTIMADO: (Solo el número en libras)
+        PRECIO_REPUESTO: (Solo el número en USD)
+        AÉREO_COSTO: (Precio final calculado)
+        AÉREO_DIAS: (Días estimados)
+        MARÍTIMO_COSTO: (Precio final calculado)
+        MARÍTIMO_DIAS: (Días estimados)
+        ADUANA: (Porcentaje aplicado)
         # Limpieza para asegurar JSON puro
         texto_limpio = response.text.replace("```json", "").replace("```", "").strip()
         datos = json.loads(texto_limpio)
