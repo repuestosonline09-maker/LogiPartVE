@@ -58,7 +58,7 @@ with st.container():
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN", type="primary"):
     if v_in and r_in and n_in:
         # URL estable que reconoce tu Nivel de Pago 1
-        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
         
         payload = {
             "contents": [{
