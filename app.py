@@ -21,7 +21,7 @@ with st.sidebar:
     if admin_pass == "admin123":
         api_key = st.text_input("Google API Key", type="password")
         if api_key:
-            genai.configure(api_key=api_key)
+            genai.configure(api_key=api_key, transport='rest')
             st.success("API Conectada")
 
 st.title("📦 Cotizador de Repuestos Internacional")
@@ -48,7 +48,7 @@ if st.button("COTIZAR AHORA"):
                 {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
             ]
             
-            model = genai.GenerativeModel('gemini-1.5-flash', safety_settings=safety_settings)
+            model = genai.GenerativeModel(model_name='models/gemini-1.5-flash', safety_settings=safety_settings)
             
             prompt = f"""
             Analiza el repuesto para: {vehiculo}, Pieza: {repuesto}, N°: {nro_parte}.
