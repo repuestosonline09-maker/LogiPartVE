@@ -1,15 +1,16 @@
 import streamlit as st
-import requests
-import json
+import google.generativeai as genai
 import time
 
 # 1. Configuración de página
 st.set_page_config(page_title="LogiPartVE Pro", layout="wide", page_icon="✈️")
 
-# Carga de Secretos
+# Carga de Secretos y Configuración de IA
 try:
     API_KEY = st.secrets["GOOGLE_API_KEY"]
     PASS_ADMIN = st.secrets["ADMIN_PASSWORD"]
+    # Configuramos la librería oficial
+    genai.configure(api_key=API_KEY)
 except:
     st.error("⚠️ Error: Configure 'Secrets' en Streamlit.")
     st.stop()
@@ -54,35 +55,32 @@ with st.container():
     with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
     with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 6. Lógica de IA con Nivel de Pago (v1beta para máxima compatibilidad)
+# 6. Lógica de IA Profesional
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN", type="primary"):
     if v_in and r_in and n_in:
-        # Volvemos a la versión que te funcionaba (v1beta) pero con el modelo Flash completo
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
-        
-        prompt = f"""
-        EXPERTO LOGÍSTICO LogiPartVE. 
-        1. TÉCNICO: Referencia {n_in} para {r_in} ({v_in}). Usa tu conocimiento de medidas/pesos Mopar/OEM.
-        2. COSTOS {o_in.upper()}: Peso mayor (Real vs Vol + 20%). Tarifas: MIA Aé ${st.session_state.tarifas['mia_a']}, Mar ${st.session_state.tarifas['mia_m']} | MAD Aé ${st.session_state.tarifas['mad']}. Mínimo $25.
-        3. ALERTAS (DETALLADO): Noticias hoy Diciembre 2025 sobre ruta {o_in} a Venezuela (Aduanas/Clima).
-        """
-
-        with st.spinner('Analizando con prioridad de pago...'):
-            try:
-                res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]})
+        try:
+            with st.spinner('Analizando con prioridad de pago...'):
+                # Usamos la librería oficial que autogestiona el Nivel de Pago
+                model = genai.GenerativeModel('gemini-1.5-flash')
                 
-                if res.status_code == 200:
-                    st.session_state.resultado_ia = res.json()['candidates'][0]['content']['parts'][0]['text']
-                else:
-                    # Si falla el principal, intentamos con el pro como respaldo
-                    url_back = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={API_KEY}"
-                    res_back = requests.post(url_back, json={"contents": [{"parts": [{"text": prompt}]}]})
-                    if res_back.status_code == 200:
-                        st.session_state.resultado_ia = res_back.json()['candidates'][0]['content']['parts'][0]['text']
-                    else:
-                        st.error(f"Error técnico: {res_back.status_code}. Google aún está procesando tu activación de pago.")
-            except Exception as e:
-                st.error(f"Error de conexión: {str(e)}")
+                prompt = f"""
+                EXPERTO LOGÍSTICO LogiPartVE. 
+                1. TÉCNICO: Referencia {n_in} para {r_in} ({v_in}).
+                2. COSTOS {o_in.upper()}: Tarifas MIA Aé ${st.session_state.tarifas['mia_a']}, Mar ${st.session_state.tarifas['mia_m']} | MAD Aé ${st.session_state.tarifas['mad']}.
+                3. ALERTAS: Diciembre 2025 ruta {o_in} a Venezuela.
+                """
+                
+                response = model.generate_content(prompt)
+                st.session_state.resultado_ia = response.text
+                
+        except Exception as e:
+            # Si el modelo flash falla por activación, intentamos con Pro
+            try:
+                model_pro = genai.GenerativeModel('gemini-1.5-pro')
+                response = model_pro.generate_content(prompt)
+                st.session_state.resultado_ia = response.text
+            except Exception as e2:
+                st.error(f"Google está terminando de activar tu cuenta. Espera 2 minutos. Error: {str(e2)}")
     else:
         st.warning("Faltan datos.")
 
@@ -97,26 +95,18 @@ if st.session_state.resultado_ia:
             st.session_state.resultado_ia = ""
             st.rerun()
 
-# 8. TABLA MANUAL
+# 8. TABLA MANUAL (Seguridad)
 st.markdown('<div class="manual-table">', unsafe_allow_html=True)
 st.markdown("### 📊 Validación Manual")
-mc1, mc2, mc3, mc4, mc5, mc6 = st.columns(6)
-with mc1: l_cm = st.number_input("Largo (cm)", min_value=0.0, key="ml_last")
-with mc2: an_cm = st.number_input("Ancho (cm)", min_value=0.0, key="man_last")
-with mc3: al_cm = st.number_input("Alto (cm)", min_value=0.0, key="mal_last")
-with mc4: p_kg = st.number_input("Peso (kg)", min_value=0.0, key="mp_last")
-with mc5: m_origen = st.selectbox("Origen", ["Miami", "Madrid"], key="mo_last")
-with mc6: m_tipo = st.selectbox("Tipo", ["Aéreo", "Marítimo"], key="mt_last")
+mc1, mc2, mc3, mc4 = st.columns(4)
+with mc1: l_cm = st.number_input("Largo (cm)", min_value=0.0, key="ml_fin")
+with mc2: an_cm = st.number_input("Ancho (cm)", min_value=0.0, key="man_fin")
+with mc3: al_cm = st.number_input("Alto (cm)", min_value=0.0, key="mal_fin")
+with mc4: p_kg = st.number_input("Peso (kg)", min_value=0.0, key="mp_fin")
 
 if st.button("🧮 CALCULAR MANUAL"):
     p_vol_kg = (l_cm * an_cm * al_cm) / 5000
     p_final_kg = max(p_kg, p_vol_kg)
-    if m_tipo == "Aéreo":
-        factor = 2.20462 if m_origen == "Miami" else 1.0
-        tarifa = st.session_state.tarifas["mia_a"] if m_origen == "Miami" else st.session_state.tarifas["mad"]
-        costo = max((p_final_kg * factor) * tarifa, 25.0)
-    else:
-        ft3 = (l_cm * an_cm * al_cm) / 28316.8
-        costo = ft3 * st.session_state.tarifas["mia_m"]
+    costo = p_final_kg * st.session_state.tarifas["mia_a"]
     st.success(f"**Costo: ${costo:.2f} USD**")
 st.markdown('</div>', unsafe_allow_html=True)
