@@ -1,16 +1,15 @@
 import streamlit as st
-import google.generativeai as genai
+import requests
+import json
 import time
 
 # 1. Configuración de página
 st.set_page_config(page_title="LogiPartVE Pro", layout="wide", page_icon="✈️")
 
-# Carga de Secretos y Configuración de IA
+# Carga de Secretos
 try:
     API_KEY = st.secrets["GOOGLE_API_KEY"]
     PASS_ADMIN = st.secrets["ADMIN_PASSWORD"]
-    # Configuramos la librería oficial
-    genai.configure(api_key=API_KEY)
 except:
     st.error("⚠️ Error: Configure 'Secrets' en Streamlit.")
     st.stop()
@@ -55,54 +54,54 @@ with st.container():
     with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
     with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 6. Lógica de IA Profesional
+# 6. Lógica de IA (Usando la URL estable v1 para cuentas de pago)
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN", type="primary"):
     if v_in and r_in and n_in:
-        try:
-            with st.spinner('Analizando con prioridad de pago...'):
-                # Usamos la librería oficial que autogestiona el Nivel de Pago
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                
-                prompt = f"""
-                EXPERTO LOGÍSTICO LogiPartVE. 
-                1. TÉCNICO: Referencia {n_in} para {r_in} ({v_in}).
-                2. COSTOS {o_in.upper()}: Tarifas MIA Aé ${st.session_state.tarifas['mia_a']}, Mar ${st.session_state.tarifas['mia_m']} | MAD Aé ${st.session_state.tarifas['mad']}.
-                3. ALERTAS: Diciembre 2025 ruta {o_in} a Venezuela.
-                """
-                
-                response = model.generate_content(prompt)
-                st.session_state.resultado_ia = response.text
-                
-        except Exception as e:
-            # Si el modelo flash falla por activación, intentamos con Pro
+        # URL estable que reconoce tu Nivel de Pago 1
+        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+        
+        payload = {
+            "contents": [{
+                "parts": [{
+                    "text": f"Experto LogiPartVE. Analiza {r_in} parte {n_in} para {v_in}. Origen {o_in}. Diciembre 2025."
+                }]
+            }]
+        }
+
+        with st.spinner('Analizando con prioridad de pago...'):
             try:
-                model_pro = genai.GenerativeModel('gemini-1.5-pro')
-                response = model_pro.generate_content(prompt)
-                st.session_state.resultado_ia = response.text
-            except Exception as e2:
-                st.error(f"Google está terminando de activar tu cuenta. Espera 2 minutos. Error: {str(e2)}")
+                res = requests.post(url, json=payload)
+                if res.status_code == 200:
+                    st.session_state.resultado_ia = res.json()['candidates'][0]['content']['parts'][0]['text']
+                else:
+                    # Si falla el principal, probamos con gemini-pro en v1
+                    url_pro = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key={API_KEY}"
+                    res_pro = requests.post(url_pro, json=payload)
+                    if res_pro.status_code == 200:
+                        st.session_state.resultado_ia = res_pro.json()['candidates'][0]['content']['parts'][0]['text']
+                    else:
+                        st.error(f"Error técnico {res_pro.status_code}. Google aún procesa tu pago.")
+            except Exception as e:
+                st.error(f"Error de conexión: {str(e)}")
     else:
         st.warning("Faltan datos.")
 
 # 7. Resultados
 if st.session_state.resultado_ia:
     st.markdown(f'<div class="report-container">{st.session_state.resultado_ia}</div>', unsafe_allow_html=True)
-    c_dw, c_cl = st.columns([5, 1])
-    with c_dw: st.download_button("📥 Descargar", st.session_state.resultado_ia, file_name="cotizacion.txt")
-    with c_cl: 
-        if st.button("🗑️ LIMPIAR"):
-            st.session_state.count += 1
-            st.session_state.resultado_ia = ""
-            st.rerun()
+    if st.button("🗑️ LIMPIAR"):
+        st.session_state.count += 1
+        st.session_state.resultado_ia = ""
+        st.rerun()
 
-# 8. TABLA MANUAL (Seguridad)
+# 8. Tabla Manual
 st.markdown('<div class="manual-table">', unsafe_allow_html=True)
 st.markdown("### 📊 Validación Manual")
 mc1, mc2, mc3, mc4 = st.columns(4)
-with mc1: l_cm = st.number_input("Largo (cm)", min_value=0.0, key="ml_fin")
-with mc2: an_cm = st.number_input("Ancho (cm)", min_value=0.0, key="man_fin")
-with mc3: al_cm = st.number_input("Alto (cm)", min_value=0.0, key="mal_fin")
-with mc4: p_kg = st.number_input("Peso (kg)", min_value=0.0, key="mp_fin")
+with mc1: l_cm = st.number_input("Largo (cm)", min_value=0.0, key="ml_v_final")
+with mc2: an_cm = st.number_input("Ancho (cm)", min_value=0.0, key="man_v_final")
+with mc3: al_cm = st.number_input("Alto (cm)", min_value=0.0, key="mal_v_final")
+with mc4: p_kg = st.number_input("Peso (kg)", min_value=0.0, key="mp_v_final")
 
 if st.button("🧮 CALCULAR MANUAL"):
     p_vol_kg = (l_cm * an_cm * al_cm) / 5000
