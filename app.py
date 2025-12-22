@@ -48,7 +48,7 @@ if st.button("COTIZAR AHORA"):
                 {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
             ]
             
-            model = genai.GenerativeModel(model_name='gemini-1.5-flash')
+            model = genai.GenerativeModel('gemini-1.5-pro')
             
             prompt = f"""
             Analiza el repuesto para: {vehiculo}, Pieza: {repuesto}, N°: {nro_parte}.
