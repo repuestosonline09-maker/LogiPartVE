@@ -2,86 +2,88 @@ import streamlit as st
 import requests
 import json
 
-# 1. Configuración de pantalla
-st.set_page_config(page_title="LogiParts AI", layout="wide", page_icon="📦")
+# 1. Configuración de página
+st.set_page_config(page_title="LogiPartVE AI", layout="wide", page_icon="🚛")
 
+if 'resultado_ia' not in st.session_state:
+    st.session_state.resultado_ia = ""
+
+# 2. Estética LogiPartVE
 st.markdown("""
     <style>
     .report-container { 
-        padding: 25px; border-radius: 15px; background-color: #f8f9fa; 
-        border: 1px solid #dee2e6; color: #1a1a1a; white-space: pre-wrap;
+        padding: 20px; border-radius: 12px; background-color: #ffffff; 
+        border: 2px solid #007bff; color: #1a1a1a;
     }
-    .stButton>button { 
-        width: 100%; background-color: #007bff; color: white; 
-        height: 3.5em; font-weight: bold; border-radius: 10px;
-    }
+    .stButton>button { border-radius: 8px; height: 3em; font-weight: bold; }
     </style>
 """, unsafe_allow_html=True)
 
-# 2. Sidebar
+# 3. Sidebar: Panel Administrativo
 with st.sidebar:
-    st.header("⚙️ Configuración")
-    admin_pass = st.text_input("Contraseña Admin", type="password")
-    api_key = ""
+    st.header("🔐 Admin LogiPartVE")
+    admin_pass = st.text_input("Password", type="password")
+    api_key, t_aereo_mia, t_mar_mia, t_mad = "", 9.0, 40.0, 20.0
     if admin_pass == "admin123":
-        api_key = st.text_input("Pega tu API Key", type="password")
+        api_key = st.text_input("Google API Key", type="password")
+        t_aereo_mia = st.number_input("MIA Aéreo ($/lb)", value=9.0)
+        t_mar_mia = st.number_input("MIA Marítimo ($/ft³)", value=40.0)
+        t_mad = st.number_input("MAD Aéreo ($/kg)", value=20.0)
 
-st.title("📦 Cotizador Inteligente LogiParts")
+# 4. Interfaz de Usuario
+st.title("🚛 LogiPartVE AI: Cotizador Express")
 
-# 3. Formulario
-col1, col2, col3 = st.columns(3)
-with col1:
-    vehiculo = st.text_input("🚙 Vehículo")
-with col2:
-    repuesto = st.text_input("🔧 Pieza")
-with col3:
-    nro_parte = st.text_input("🏷️ N° Parte")
+col_in1, col_in2, col_in3 = st.columns([2, 2, 1])
+with col_in1: vehiculo = st.text_input("🚙 Vehículo", placeholder="Año, Marca, Modelo")
+with col_in2: repuesto = st.text_input("🔧 Repuesto")
+with col_in3: origen = st.selectbox("📍 Origen", ["Miami", "Madrid"])
 
-# 4. Lógica de Auto-Detección y Petición
-if st.button("GENERAR COTIZACIÓN AHORA"):
-    if not api_key:
-        st.error("⚠️ Ingresa la API Key en el panel lateral.")
-    else:
-        try:
-            with st.spinner('🔍 Detectando modelo compatible...'):
-                # PASO 1: Listar modelos disponibles para TU clave
+# 5. Lógica de Petición
+c_btn1, c_btn2 = st.columns([4, 1])
+
+with c_btn1:
+    if st.button("🚀 GENERAR COTIZACIÓN RESUMIDA", type="primary"):
+        if not api_key: st.error("⚠️ Falta API Key.")
+        else:
+            try:
+                # Detección de modelo
                 list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
-                list_res = requests.get(list_url).json()
-                
-                modelos_validos = [
-                    m['name'] for m in list_res.get('models', []) 
-                    if 'generateContent' in m.get('supportedGenerationMethods', [])
-                    and ('flash' in m['name'] or 'pro' in m['name'])
-                ]
+                modelos = [m['name'] for m in requests.get(list_url).json().get('models', []) if 'generateContent' in m.get('supportedGenerationMethods', [])]
+                url = f"https://generativelanguage.googleapis.com/v1beta/{modelos[0]}:generateContent?key={api_key}"
 
-                if not modelos_validos:
-                    st.error("No se encontraron modelos de generación disponibles para esta API Key.")
-                    st.stop()
+                prompt = f"""
+                Actúa como experto logístico de LogiPartVE. 
+                PROPORCIONA UNA COTIZACIÓN ULTRA-RESUMIDA PARA: {repuesto} / {vehiculo} (Origen: {origen}).
                 
-                # Usamos el primer modelo válido encontrado (ej: models/gemini-1.5-flash-8b)
-                modelo_a_usar = modelos_validos[0]
-                st.info(f"✅ Conectado mediante: {modelo_a_usar}")
+                REGLAS:
+                1. MIAMI: Da costo Aéreo (${t_aereo_mia}/lb) y Marítimo (${t_mar_mia}/ft³).
+                2. MADRID: Solo Aéreo (${t_mad}/kg).
+                3. Usa pesos/medidas con empaque REFORZADO.
+                
+                ESTRUCTURA OBLIGATORIA (Corta y Directa):
+                - FICHA: Peso y Medidas estimadas.
+                - COSTOS: Cuadro comparativo final.
+                - CUADRO DE RECOMENDACIONES Y ALERTAS: 
+                  * Recomendación específica de embalaje para esta pieza.
+                  * ALERTAS EN TIEMPO REAL: Analiza problemas actuales (clima en el Atlántico, huelgas, retrasos aduanales en Venezuela o congestión en {origen}) que puedan afectar el tiempo de entrega HOY.
+                
+                Si no sabes el peso, responde 'NO LO SÉ'.
+                """
 
-            # PASO 2: Realizar la cotización
-            url = f"https://generativelanguage.googleapis.com/v1beta/{modelo_a_usar}:generateContent?key={api_key}"
-            
-            payload = {
-                "contents": [{"parts": [{"text": f"Experto en logística: Cotiza para Venezuela. Vehículo: {vehiculo}, Pieza: {repuesto}, Nro: {nro_parte}. Incluye descripción, peso lb, precio USD y envío Aéreo vs Marítimo."}]}]
-            }
-            
-            with st.spinner('⏳ Generando presupuesto...'):
-                response = requests.post(url, json=payload)
-                resultado = response.json()
-                
-            if response.status_code == 200:
-                texto_ia = resultado['candidates'][0]['content']['parts'][0]['text']
-                st.markdown("### 📋 Resultado")
-                st.markdown(f'<div class="report-container">{texto_ia}</div>', unsafe_allow_html=True)
-                st.balloons()
-            else:
-                st.error(f"Error: {resultado.get('error', {}).get('message', 'Error desconocido')}")
-                
-        except Exception as e:
-            st.error(f"Error de conexión: {str(e)}")
+                with st.spinner('⏳ Analizando rutas y alertas globales...'):
+                    response = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]})
+                    st.session_state.resultado_ia = response.json()['candidates'][0]['content']['parts'][0]['text']
+            except: st.error("Error de conexión.")
 
-st.caption("LogiParts AI - Sistema Auto-Configurable")
+with c_btn2:
+    if st.button("🗑️ LIMPIAR"):
+        st.session_state.resultado_ia = ""
+        st.rerun()
+
+# 6. Despliegue
+if st.session_state.resultado_ia:
+    st.markdown("---")
+    st.markdown(f'<div class="report-container">{st.session_state.resultado_ia}</div>', unsafe_allow_html=True)
+
+st.divider()
+st.caption("LogiPartVE AI - Info actualizada en tiempo real sobre rutas aéreas y marítimas.")
