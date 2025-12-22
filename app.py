@@ -1,13 +1,14 @@
 import streamlit as st
 import google.generativeai as genai
 
-# 1. Configuración visual
+# 1. Configuración de pantalla
 st.set_page_config(page_title="LogiParts AI", layout="wide")
 
+# Estilos básicos
 st.markdown("""
     <style>
-    .report-container { padding: 20px; border-radius: 10px; background-color: #ffffff; border: 1px solid #e0e0e0; }
-    .stButton>button { width: 100%; background-color: #007bff; color: white; font-weight: bold; }
+    .report-container { padding: 20px; border-radius: 10px; background-color: #f8f9fa; border: 1px solid #dee2e6; }
+    .stButton>button { width: 100%; background-color: #007bff; color: white; height: 3em; font-weight: bold; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -19,52 +20,55 @@ with st.sidebar:
     if admin_pass == "admin123":
         api_key = st.text_input("Pega tu API Key aquí", type="password")
         if api_key:
-            # Forzamos la versión v1 para evitar errores 404
-            genai.configure(api_key=api_key, transport='rest', client_options={'api_version': 'v1'})
-            st.success("✅ Conectado a Google AI")
+            # Configuración simplificada para evitar ValueError
+            genai.configure(api_key=api_key, transport='rest')
+            st.success("✅ API Conectada")
 
 st.title("📦 Cotizador Inteligente LogiParts")
 
-# 3. Formulario de entrada
+# 3. Formulario
 col1, col2, col3 = st.columns(3)
 with col1:
     vehiculo = st.text_input("Vehículo (Año/Marca/Modelo)")
 with col2:
-    repuesto = st.text_input("Nombre de la Pieza")
+    repuesto = st.text_input("Pieza")
 with col3:
-    nro_parte = st.text_input("Número de Parte (Opcional)")
+    nro_parte = st.text_input("N° Parte (Opcional)")
 
-# 4. Lógica de procesamiento
+# 4. Lógica
 if st.button("GENERAR COTIZACIÓN"):
     if not api_key:
-        st.error("⚠️ Falta la API Key en el panel lateral.")
+        st.error("⚠️ Ingresa la API Key en el panel lateral.")
     elif not vehiculo or not repuesto:
-        st.warning("⚠️ Completa los datos del vehículo y la pieza.")
+        st.warning("⚠️ Indica al menos el vehículo y la pieza.")
     else:
         try:
-            # Usamos el modelo flash que es el más rápido
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            # Forzamos la versión v1 directamente en el nombre del modelo
+            # Esta es la forma más compatible de hacerlo
+            model = genai.GenerativeModel(model_name='models/gemini-1.5-flash')
             
             prompt = f"""
-            Como experto logístico, analiza:
-            Vehículo: {vehiculo}
-            Repuesto: {repuesto}
-            N° Parte: {nro_parte if nro_parte else 'No especificado'}
+            Actúa como experto logístico internacional. Para el repuesto: {repuesto} 
+            del vehículo: {vehiculo} (N° Parte: {nro_parte if nro_parte else 'N/A'}):
             
-            Proporciona:
-            1. Descripción técnica.
-            2. Peso estimado (lb) y Precio sugerido (USD).
-            3. Tiempo y costo estimado de envío a Venezuela (Aéreo y Marítimo).
+            1. Proporciona un breve análisis técnico.
+            2. Estima peso en libras (lb).
+            3. Estima costos de envío a Venezuela (Aéreo y Marítimo).
             """
             
-            with st.spinner('Analizando con IA...'):
+            with st.spinner('Consultando IA...'):
                 response = model.generate_content(prompt)
                 
             st.markdown("---")
-            st.markdown("### 📊 Reporte Generado")
+            st.markdown("### 📊 Reporte Logístico")
             st.markdown(f'<div class="report-container">{response.text}</div>', unsafe_allow_html=True)
             st.balloons()
             
         except Exception as e:
-            st.error(f"Error de comunicación: {e}")
-            st.info("Asegúrate de que la API Key sea la correcta y que la App tenga acceso a internet.")
+            # Si da error 404, probamos con el nombre corto
+            try:
+                model_alt = genai.GenerativeModel('gemini-1.5-flash')
+                response = model_alt.generate_content(prompt)
+                st.markdown(f'<div class="report-container">{response.text}</div>', unsafe_allow_html=True)
+            except Exception as e2:
+                st.error(f"Error de conexión: {e2}")
