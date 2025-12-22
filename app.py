@@ -30,6 +30,7 @@ st.markdown("""
         font-family: Arial, sans-serif;
     }
     .stButton>button { border-radius: 8px; height: 3.5em; font-weight: bold; }
+    .min-fee-warning { background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; border-left: 5px solid #ffc107; margin-bottom: 10px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -51,7 +52,7 @@ with col_l1:
     # Espacio para tu enlace de logo
     st.image("https://cdn-icons-png.flaticon.com/512/2208/2208233.png", width=120) 
 with col_l2:
-    st.title("LogiPartVE AI: Cotizador Express")
+    st.title("LogiPartVE AI: Cotizador Puerta a Puerta")
 
 # 4. Interfaz del Vendedor
 with st.container():
@@ -64,12 +65,11 @@ with st.container():
         o_in = st.selectbox("📍 ORIGEN", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
 
 # 5. Lógica de Petición
-if st.button("🚀 GENERAR COTIZACIÓN DE ENVÍO", type="primary"):
+if st.button("🚀 GENERAR COTIZACIÓN PUERTA A PUERTA", type="primary"):
     if not v_in or not r_in or not n_in:
         st.warning("⚠️ Complete todos los datos del repuesto.")
     else:
         try:
-            # Obtención de modelo compatible
             url_list = f"https://generativelanguage.googleapis.com/v1beta/models?key={API_KEY}"
             response_models = requests.get(url_list).json()
             modelos = [m['name'] for m in response_models.get('models', []) if 'generateContent' in m.get('supportedGenerationMethods', [])]
@@ -79,29 +79,28 @@ if st.button("🚀 GENERAR COTIZACIÓN DE ENVÍO", type="primary"):
             else:
                 url = f"https://generativelanguage.googleapis.com/v1beta/{modelos[0]}:generateContent?key={API_KEY}"
 
-                # PROMPT REFORZADO PARA CÁLCULOS
+                # PROMPT REFORZADO CON REGLAS "PUERTA A PUERTA" Y "MÍNIMO $25"
                 prompt = f"""
                 ERES EL EXPERTO TÉCNICO Y LOGÍSTICO DE LogiPartVE.
                 
-                PRODUCTO: {r_in} para {v_in}, N° Parte: {n_in}.
-                ORIGEN: {o_in}.
+                SERVICIO: Todo es PUERTA A PUERTA (DDP) desde {o_in} hasta Venezuela.
                 
-                INSTRUCCIONES DE CÁLCULO:
-                1. VALIDA compatibilidad. Si hay error, detén y explica.
-                2. SOBREDIMENSIÓN: Estima peso y medidas originales, pero AUMENTA un 20% el volumen para el cálculo final.
-                3. MATEMÁTICA OBLIGATORIA (Muestra el procedimiento):
-                   - Si es MIAMI: 
-                     * Aéreo: Peso(lb) x ${st.session_state.tarifas['mia_a']}.
-                     * Marítimo: (Largo x Ancho x Alto / 1728) x ${st.session_state.tarifas['mia_m']}.
-                   - Si es MADRID:
-                     * Aéreo: Peso(kg) x ${st.session_state.tarifas['mad']}.
+                REGLAS DE CÁLCULO:
+                1. VALIDA: N° {n_in} para {r_in} en {v_in}.
+                2. SOBREDIMENSIÓN: Añade un 20% de volumen/medidas por empaque reforzado.
+                3. COSTOS PUERTA A PUERTA: Debe incluir manejo aduanal y entrega.
+                   - MIAMI: Aéreo ${st.session_state.tarifas['mia_a']}/lb | Marítimo ${st.session_state.tarifas['mia_m']}/ft³.
+                   - MADRID: Aéreo ${st.session_state.tarifas['mad']}/kg.
                 
-                4. ALERTAS: Noticias actuales (clima, huelgas, aduanas Venezuela) y normativas Hazmat.
+                4. REGLA DE ORO (TARIFA MÍNIMA):
+                   Si el costo total de un envío AÉREO (ya sea desde Miami o Madrid) resulta ser MENOR a $25 USD, debes mostrar el cálculo pero añadir una advertencia destacada al final: '⚠️ NOTA PARA VENDEDOR: El monto calculado es menor al mínimo. SE DEBE COBRAR TARIFA MÍNIMA DE $25.00'.
                 
-                Respuesta ultra-resumida con cuadros de costos finales en $.
+                5. ALERTAS: Noticias actuales (clima, huelgas, aduanas Venezuela) y Hazmat.
+                
+                Estructura: Ficha técnica -> Medidas -> Cuadro de Costos Puerta a Puerta -> Recomendaciones y Alertas.
                 """
 
-                with st.spinner('⏳ Validando y Calculando...'):
+                with st.spinner('⏳ Procesando cotización Puerta a Puerta...'):
                     res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]})
                     st.session_state.resultado_ia = res.json()['candidates'][0]['content']['parts'][0]['text']
         except Exception as e:
@@ -116,5 +115,13 @@ if st.button("🗑️ LIMPIAR"):
 # 6. Despliegue de Resultados
 if st.session_state.resultado_ia:
     st.markdown("---")
+    
+    # Detección visual de la advertencia de tarifa mínima
+    if "TARIFA MÍNIMA DE $25" in st.session_state.resultado_ia.upper():
+        st.markdown('<div class="min-fee-warning">📢 ATENCIÓN: Esta cotización está sujeta a la Tarifa Mínima de Envío Aéreo ($25).</div>', unsafe_allow_html=True)
+    
     st.markdown(f'<div class="report-container">{st.session_state.resultado_ia}</div>', unsafe_allow_html=True)
     st.download_button("📥 Exportar Presupuesto", st.session_state.resultado_ia, file_name="cotizacion_logipartve.txt")
+
+st.divider()
+st.caption(f"LogiPartVE AI v4.4 | Servicio Puerta a Puerta | Tarifa Mínima Aérea: $25")
