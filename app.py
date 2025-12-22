@@ -42,7 +42,7 @@ if st.button("GENERAR COTIZACIÓN"):
     else:
         try:
             # Forzamos la URL de la versión 1 estable
-            url = f"https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key={api_key}"
+            url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
             
             payload = {
                 "contents": [{
