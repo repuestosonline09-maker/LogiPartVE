@@ -35,7 +35,7 @@ if st.button("COTIZAR AHORA"):
         st.warning("⚠️ Por favor, indica al menos el vehículo y la pieza.")
     else:
         try:
-            model = genai.GenerativeModel('gemini-pro')
+            model = genai.GenerativeModel(model_name='models/gemini-1.5-flash')
             
             # Incluimos el N° de Parte en la consulta a la IA
             prompt = f"""
