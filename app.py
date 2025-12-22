@@ -1,16 +1,17 @@
 import streamlit as st
 import requests
 import json
+import time
 
 # 1. Configuración de página
 st.set_page_config(page_title="LogiPartVE Pro", layout="wide", page_icon="✈️")
 
-# Carga de Secretos (Protección de ADN)
+# Carga de Secretos
 try:
     API_KEY = st.secrets["GOOGLE_API_KEY"]
     PASS_ADMIN = st.secrets["ADMIN_PASSWORD"]
 except:
-    st.error("⚠️ Error: Configure 'Secrets' en Streamlit Cloud.")
+    st.error("⚠️ Error: Configure 'Secrets' en Streamlit.")
     st.stop()
 
 # Estados de sesión
@@ -33,69 +34,59 @@ st.markdown("""
 
 # 3. Sidebar (Admin)
 with st.sidebar:
-    check_pass = st.text_input("Admin Password", type="password")
+    check_pass = st.text_input("Admin", type="password")
     if check_pass == PASS_ADMIN:
         st.session_state.tarifas["mia_a"] = st.number_input("MIA Aéreo ($/lb)", value=st.session_state.tarifas["mia_a"])
         st.session_state.tarifas["mia_m"] = st.number_input("MIA Marítimo ($/ft³)", value=st.session_state.tarifas["mia_m"])
         st.session_state.tarifas["mad"] = st.number_input("MAD Aéreo ($/kg)", value=st.session_state.tarifas["mad"])
 
 # 4. Encabezado
-c_logo1, c_logo2 = st.columns([1, 5])
-with c_logo1:
-    st.image("https://cdn-icons-png.flaticon.com/512/2208/2208233.png", width=60) 
-with c_logo2:
-    st.title("LogiPartVE: Verificación y Cotización Puerta a Puerta")
+c1, c2 = st.columns([1, 5])
+with c1: st.image("https://cdn-icons-png.flaticon.com/512/2208/2208233.png", width=60) 
+with c2: st.title("LogiPartVE: Gestión Experta DDP")
 
 # 5. Formulario Principal
 with st.container():
-    c1, c2, c3, c4, c5 = st.columns([2.5, 2, 2, 1.2, 1.2])
-    with c1: v_in = st.text_input("Vehículo", key=f"v_{st.session_state.count}")
-    with c2: r_in = st.text_input("Repuesto", key=f"r_{st.session_state.count}")
-    with c3: n_in = st.text_input("N° Parte", key=f"n_{st.session_state.count}")
-    with c4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
-    with c5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
+    col1, col2, col3, col4, col5 = st.columns([2.5, 2, 2, 1.2, 1.2])
+    with col1: v_in = st.text_input("Vehículo", key=f"v_{st.session_state.count}")
+    with col2: r_in = st.text_input("Repuesto", key=f"r_{st.session_state.count}")
+    with col3: n_in = st.text_input("N° Parte", key=f"n_{st.session_state.count}")
+    with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
+    with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 6. Lógica de IA con detección dinámica de modelo (Fix 404)
+# 6. Lógica de IA con Manejo de Cuota (Error 429)
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN", type="primary"):
     if v_in and r_in and n_in:
-        try:
-            # Detección dinámica de modelos disponibles para evitar el error 404
-            url_models = f"https://generativelanguage.googleapis.com/v1beta/models?key={API_KEY}"
-            model_data = requests.get(url_models).json()
-            # Buscamos el mejor modelo disponible que soporte generación de contenido
-            modelos = [m['name'] for m in model_data.get('models', []) if 'generateContent' in m.get('supportedGenerationMethods', [])]
-            
-            if not modelos:
-                st.error("No se encontraron modelos disponibles en tu cuenta de Google API.")
-            else:
-                # Usamos el primer modelo compatible de la lista (generalmente gemini-pro o flash)
-                url = f"https://generativelanguage.googleapis.com/v1beta/{modelos[0]}:generateContent?key={API_KEY}"
+        # Intentamos usar el modelo flash directamente por eficiencia
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+        
+        prompt = f"""
+        EXPERTO LOGÍSTICO LogiPartVE. 
+        1. TÉCNICO: Referencia {n_in} para {r_in} ({v_in}). Usa tu conocimiento de medidas/pesos Mopar/OEM.
+        2. COSTOS {o_in.upper()}: Peso mayor (Real vs Vol + 20%). Tarifas: MIA Aé ${st.session_state.tarifas['mia_a']}, Mar ${st.session_state.tarifas['mia_m']} | MAD Aé ${st.session_state.tarifas['mad']}. Mínimo $25.
+        3. ALERTAS (DETALLADO): Noticias hoy Diciembre 2025 sobre ruta {o_in} a Venezuela (Aduanas/Clima).
+        """
 
-                prompt = f"""
-                ACTÚA COMO EXPERTO SENIOR EN RECAMBIOS Y LOGÍSTICA VENEZUELA.
+        with st.spinner('Analizando... (Si da error 429, espere 10 segundos)'):
+            try:
+                res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]})
                 
-                1. ANÁLISIS TÉCNICO (RESUMIDO): Identifica {n_in} para {r_in} ({v_in}). 
-                   Usa tu base de datos de pesos y medidas originales. No asumas si el número es inválido.
-                
-                2. COTIZACIÓN (RESUMIDA):
-                   - Muestra Peso Físico, Dimensiones y Peso a Facturar (Mayor entre Físico y Volumétrico + 20% seguridad).
-                   - Tarifas: MIA Aé ${st.session_state.tarifas['mia_a']}, Mar ${st.session_state.tarifas['mia_m']} | MAD Aé ${st.session_state.tarifas['mad']}.
-                   - REGLA MÍNIMO: Si Total Aéreo < $25, advertir 'TARIFA MÍNIMA $25'.
-
-                3. MONITOREO DE NOTICIAS Y ALERTAS (EXTENSO):
-                   - Reporta noticias actuales de Diciembre 2025 sobre clima, aduanas y puertos para la ruta {o_in} a Venezuela.
-                """
-
-                with st.spinner('Analizando pieza y noticias...'):
-                    res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]})
-                    if res.status_code == 200:
-                        st.session_state.resultado_ia = res.json()['candidates'][0]['content']['parts'][0]['text']
+                if res.status_code == 429:
+                    st.error("⚠️ Límite de mensajes alcanzado. Por favor, espera 15 segundos y presiona el botón de nuevo.")
+                elif res.status_code == 200:
+                    st.session_state.resultado_ia = res.json()['candidates'][0]['content']['parts'][0]['text']
+                else:
+                    # Si el modelo flash falla, intentamos con el pro como respaldo
+                    url_back = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={API_KEY}"
+                    res_back = requests.post(url_back, json={"contents": [{"parts": [{"text": prompt}]}]})
+                    if res_back.status_code == 200:
+                        st.session_state.resultado_ia = res_back.json()['candidates'][0]['content']['parts'][0]['text']
                     else:
-                        st.error(f"Error de API: {res.status_code}. Intente de nuevo.")
-        except Exception as e:
-            st.error(f"Error de conexión: {str(e)}")
+                        st.error("La API de Google está saturada. Intenta en un minuto.")
+            except Exception as e:
+                st.error(f"Error de conexión: {str(e)}")
     else:
-        st.warning("Complete todos los campos.")
+        st.warning("Faltan datos.")
 
 # 7. Resultados
 if st.session_state.resultado_ia:
@@ -108,9 +99,9 @@ if st.session_state.resultado_ia:
             st.session_state.resultado_ia = ""
             st.rerun()
 
-# 8. TABLA MANUAL
+# 8. TABLA MANUAL (Funciona siempre, no usa API)
 st.markdown('<div class="manual-table">', unsafe_allow_html=True)
-st.markdown("### 📊 Validación Manual Directa")
+st.markdown("### 📊 Validación Manual (No consume créditos de IA)")
 mc1, mc2, mc3, mc4, mc5, mc6 = st.columns(6)
 with mc1: l_cm = st.number_input("Largo (cm)", min_value=0.0, key="ml")
 with mc2: an_cm = st.number_input("Ancho (cm)", min_value=0.0, key="man")
@@ -119,7 +110,7 @@ with mc4: p_kg = st.number_input("Peso (kg)", min_value=0.0, key="mp")
 with mc5: m_origen = st.selectbox("Origen", ["Miami", "Madrid"], key="mo")
 with mc6: m_tipo = st.selectbox("Tipo", ["Aéreo", "Marítimo"], key="mt")
 
-if st.button("🧮 CALCULAR"):
+if st.button("🧮 CALCULAR MANUAL"):
     p_vol_kg = (l_cm * an_cm * al_cm) / 5000
     p_final_kg = max(p_kg, p_vol_kg)
     if m_tipo == "Aéreo":
@@ -129,5 +120,5 @@ if st.button("🧮 CALCULAR"):
     else:
         ft3 = (l_cm * an_cm * al_cm) / 28316.8
         costo = ft3 * st.session_state.tarifas["mia_m"]
-    st.success(f"**Costo Estimado: ${costo:.2f} USD**")
+    st.success(f"**Costo: ${costo:.2f} USD**")
 st.markdown('</div>', unsafe_allow_html=True)
