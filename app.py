@@ -5,11 +5,7 @@ import json
 # 1. Configuración de página
 st.set_page_config(page_title="LogiPartVE AI Pro", layout="wide", page_icon="🚛")
 
-# Inicialización de llaves de estado para limpieza total
-campos = ["vehiculo", "repuesto", "nro_parte", "origen"]
-for campo in campos:
-    if campo not in st.session_state:
-        st.session_state[campo] = ""
+# Inicialización de llaves de estado
 if 'resultado_ia' not in st.session_state:
     st.session_state.resultado_ia = ""
 
@@ -21,6 +17,7 @@ st.markdown("""
         border: 2px solid #007bff; color: #1a1a1a; white-space: pre-wrap;
     }
     .stButton>button { border-radius: 8px; height: 3.5em; font-weight: bold; }
+    .hazmat-warning { color: #856404; background-color: #fff3cd; padding: 10px; border-radius: 5px; margin-top: 10px; border: 1px solid #ffeeba; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -36,98 +33,71 @@ with st.sidebar:
         t_mad = st.number_input("MAD Aéreo ($/kg)", value=20.0)
 
 # 4. Interfaz de Usuario
-st.title("🚛 LogiPartVE AI: Verificación y Cotización")
+st.title("🚛 LogiPartVE AI: Auditoría Técnica y Logística")
 
 with st.container():
     c1, c2 = st.columns(2)
     with c1:
-        # Usamos st.session_state para permitir el borrado manual
-        vehiculo_input = st.text_input("🚙 Vehículo (MARCA, MODELO, AÑO, CILINDRADA)", 
-                                       placeholder="Ej: Toyota Hilux 2015 2.7L", 
-                                       key="v_input")
-        repuesto_input = st.text_input("🔧 Nombre del Repuesto", 
-                                       placeholder="Ej: Bomba de Agua", 
-                                       key="r_input")
+        v_in = st.text_input("🚙 Vehículo (Marca, Modelo, Año, Cilindrada)", placeholder="Ej: Ford Explorer 2017 3.5L EcoBoost", key="v_field")
+        r_in = st.text_input("🔧 Nombre del Repuesto", placeholder="Ej: Airbag de Volante o Amortiguador", key="r_field")
     with c2:
-        nro_parte_input = st.text_input("🏷️ NÚMERO DE PARTE (Exacto)", 
-                                        placeholder="Ej: 16100-09442", 
-                                        key="n_input")
-        origen_input = st.selectbox("📍 ORIGEN DEL REPUESTO", 
-                                     ["Miami", "Madrid"], 
-                                     key="o_input")
+        n_in = st.text_input("🏷️ NÚMERO DE PARTE", placeholder="Ej: GB5Z-78043B13-B", key="n_field")
+        o_in = st.selectbox("📍 ORIGEN DEL REPUESTO", ["Miami", "Madrid"], key="o_field")
 
-# 5. Lógica de Petición con Filtro Estricto de Origen
+# 5. Lógica con Normativas y Sobredimensión
 c_btn1, c_btn2 = st.columns([4, 1])
 
 with c_btn1:
     if st.button("🚀 VALIDAR Y COTIZAR", type="primary"):
-        if not api_key: 
-            st.error("⚠️ Falta API Key.")
-        elif not vehiculo_input or not repuesto_input or not nro_parte_input:
-            st.warning("⚠️ Los campos Vehículo, Repuesto y N° de Parte son OBLIGATORIOS.")
+        if not api_key: st.error("⚠️ Configure la API Key.")
+        elif not v_in or not r_in or not n_in: st.warning("⚠️ Todos los campos son obligatorios.")
         else:
             try:
                 list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
-                modelos_res = requests.get(list_url).json()
-                modelos = [m['name'] for m in modelos_res.get('models', []) if 'generateContent' in m.get('supportedGenerationMethods', [])]
+                modelos = [m['name'] for m in requests.get(list_url).json().get('models', []) if 'generateContent' in m.get('supportedGenerationMethods', [])]
                 url = f"https://generativelanguage.googleapis.com/v1beta/{modelos[0]}:generateContent?key={api_key}"
-
-                # Instrucciones de bloqueo de origen
-                if origen_input == "Miami":
-                    instruccion_origen = f"Solo cotiza ruta MIAMI-VENEZUELA (Aéreo ${t_aereo_mia}/lb y Marítimo ${t_mar_mia}/ft³). PROHIBIDO mencionar Madrid."
-                else:
-                    instruccion_origen = f"Solo cotiza ruta MADRID-VENEZUELA (Aéreo ${t_mad}/kg). PROHIBIDO mencionar Miami o transporte marítimo."
 
                 prompt = f"""
                 ERES EL EXPERTO TÉCNICO DE LogiPartVE.
                 
-                VALIDACIÓN TÉCNICA: Verifica si el N° DE PARTE: {nro_parte_input} es para {repuesto_input} en {vehiculo_input}.
-                Si hay error, responde: 'ERROR DE VALIDACIÓN TÉCNICA' y explica detalladamente por qué.
+                VALIDACIÓN TÉCNICA: Verifica compatibilidad de N° {n_in} para {r_in} en {v_in}.
+                Si hay error, responde: 'ERROR DE VALIDACIÓN TÉCNICA' y explica.
+
+                SI ES CORRECTO, COTIZA DESDE {o_in} BAJO ESTAS REGLAS:
+                1. ORIGEN EXCLUSIVO: Solo usa tarifas de {o_in}. (MIA: $9/lb, $40/ft³ | MAD: $20/kg).
+                2. FACTOR DE SEGURIDAD: Calcula dimensiones con un margen extra del 15-20% para empaques reforzados del proveedor.
+                3. NORMATIVAS Y HAZMAT: Identifica si el producto es carga peligrosa (aceites, gases, airbags, baterías, imanes). 
+                   Si aplica, explica por qué el costo podría aumentar (impuestos Hazmat o manejo especial).
                 
-                SI ES CORRECTO, DA LA COTIZACIÓN ULTRA-RESUMIDA:
-                - {instruccion_origen}
-                - Peso y Medidas con empaque REFORZADO.
-                - CUADRO DE EMBALAJE Y ALERTAS LOGÍSTICAS (retrasos, clima o aduanas para {origen_input}).
-                
-                Si no estás seguro de las medidas, responde 'NO LO SÉ'.
+                ESTRUCTURA:
+                - Ficha Técnica y Verificación.
+                - Logística (Peso/Medidas con sobremargen).
+                - Costos (Comparativa Aéreo/Marítimo si es Miami).
+                - CUADRO DE RECOMENDACIONES, NORMATIVAS Y ALERTAS LOGÍSTICAS.
                 """
 
-                with st.spinner(f'🔍 Validando pieza y logística desde {origen_input}...'):
+                with st.spinner('🔍 Auditando normativas y dimensiones...'):
                     response = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]})
                     st.session_state.resultado_ia = response.json()['candidates'][0]['content']['parts'][0]['text']
             except: st.error("Error de conexión.")
 
 with c_btn2:
     if st.button("🗑️ LIMPIAR"):
-        # Borramos las llaves de los inputs
-        st.session_state.v_input = ""
-        st.session_state.r_input = ""
-        st.session_state.n_input = ""
+        # Limpieza manual de cada campo
+        st.session_state.v_field = ""
+        st.session_state.r_field = ""
+        st.session_state.n_field = ""
         st.session_state.resultado_ia = ""
         st.rerun()
 
-# 6. Despliegue de Resultados
+# 6. Despliegue
 if st.session_state.resultado_ia:
     st.markdown("---")
-    if "ERROR DE VALIDACIÓN TÉCNICA" in st.session_state.resultado_ia:
-        st.error("❌ INCONSISTENCIA TÉCNICA DETECTADA")
-    
     st.markdown(f'<div class="report-container">{st.session_state.resultado_ia}</div>', unsafe_allow_html=True)
 
-    if "ERROR" in st.session_state.resultado_ia or "NO LO SÉ" in st.session_state.resultado_ia:
-        with st.expander("📊 CALCULAR MANUALMENTE (Tarifas LogiPartVE)"):
-            col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-            with col_m1: l = st.number_input("Largo (in)", value=0.0)
-            with col_m2: an = st.number_input("Ancho (in)", value=0.0)
-            with col_m3: al = st.number_input("Alto (in)", value=0.0)
-            with col_m4: p = st.number_input("Peso", value=0.0)
-            
-            if st.button("Calcular"):
-                if origen_input == "Miami":
-                    a, m = p*t_aereo_mia, ((l*an*al)/1728)*t_mar_mia
-                    st.success(f"MIA: Aéreo ${a:.2f} | Marítimo ${m:.2f}")
-                else:
-                    st.success(f"MAD: Aéreo ${p*t_mad:.2f}")
+    # Identificación visual de advertencias Hazmat en la respuesta
+    if any(word in st.session_state.resultado_ia.upper() for word in ["HAZMAT", "PELIGROSA", "RESTRICTO", "GAS", "INFLAMABLE"]):
+        st.warning("⚠️ Esta mercancía puede estar sujeta a recargos por Normativas Internacionales de Seguridad.")
 
 st.divider()
-st.caption(f"LogiPartVE AI v3.0 | Tarifas: MIA Aéreo ${t_aereo_mia} - MAD ${t_mad} | Saliendo de {origen_input}")
+st.caption(f"LogiPartVE AI v3.5 | Factor de Seguridad de Empaque Activo | Auditoría Hazmat")
