@@ -12,7 +12,7 @@ with st.sidebar:
     if admin_pass == "admin123":
         api_key = st.text_input("Pega tu API Key de Colombia", type="password")
         if api_key:
-            genai.configure(api_key=api_key)
+            genai.configure(api_key=api_key, transport='rest')
             st.success("✅ API Conectada")
 
 st.title("📦 Cotizador LogiParts AI")
@@ -35,7 +35,7 @@ if st.button("COTIZAR AHORA"):
         st.warning("⚠️ Por favor, indica al menos el vehículo y la pieza.")
     else:
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = genai.GenerativeModel('gemini-pro')
             
             # Incluimos el N° de Parte en la consulta a la IA
             prompt = f"""
