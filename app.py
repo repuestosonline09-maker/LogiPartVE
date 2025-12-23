@@ -30,8 +30,9 @@ with st.sidebar:
     if check_pass == PASS_ADMIN:
         st.session_state.tarifas["mia_a"] = st.number_input("MIA Aéreo ($/lb)", value=st.session_state.tarifas["mia_a"])
         st.session_state.tarifas["mia_m"] = st.number_input("MIA Marítimo ($/ft³)", value=st.session_state.tarifas["mia_m"])
+        st.session_state.tarifas["mad"] = st.number_input("MAD Aéreo ($/kg)", value=st.session_state.tarifas["mad"])
 
-# 3. INTERFAZ DE ENTRADA
+# 3. INTERFAZ DE ENTRADA PRINCIPAL
 st.title("LogiPartVE: Análisis Logístico DDP")
 st.markdown("---")
 
@@ -42,25 +43,24 @@ with col3: n_in = st.text_input("N° Parte", key=f"n_{st.session_state.count}")
 with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
 with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 4. LÓGICA DE INTELIGENCIA LOGÍSTICA (PROMPT RESTAURADO Y RESUMIDO)
+# 4. LÓGICA DE INTELIGENCIA LOGÍSTICA
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN", type="primary"):
     if v_in and r_in and n_in:
         modelos = ["gemini-2.0-flash", "gemini-1.5-pro"]
         
-        # PROMPT MAESTRO OPTIMIZADO PARA BREVEDAD
         prompt = f"""
         ERES EL EXPERTO LOGÍSTICO DE LOGIPARTVE. 
-        OBJETIVO: Análisis técnico y logístico DDP para {r_in} ({n_in}) de {v_in}.
+        OBJETIVO: Análisis DDP para {r_in} ({n_in}) de {v_in}.
         ORIGEN: {o_in} | ENVÍO: {t_in}.
-        TARIFAS ACTUALES: {st.session_state.tarifas}.
+        TARIFAS: {st.session_state.tarifas}.
 
-        INSTRUCCIONES DE FORMATO (ESTRICTO):
-        1. SÉ MUY BREVE Y DIRECTO. No saludes, no des introducciones.
-        2. ANÁLISIS TÉCNICO: Confirma si el N° de parte coincide con el vehículo. Menciona peso/dimensiones estimadas.
-        3. LOGÍSTICA DDP: Explica brevemente el proceso desde {o_in} a Venezuela.
-        4. ALERTA ADUANA: Indica si el repuesto tiene restricciones o requiere permisos especiales.
-        5. RESUMEN DE COSTOS: Da un estimado final basado en las tarifas provistas.
-        Usa viñetas. Máximo 150 palabras.
+        INSTRUCCIONES DE FORMATO:
+        1. SÉ MUY BREVE. No saludes.
+        2. ANÁLISIS: Confirma compatibilidad y peso estimado.
+        3. LOGÍSTICA: Proceso DDP a Venezuela.
+        4. ADUANA: Alertas de restricción.
+        5. COSTOS: Estimado final con tarifas dadas.
+        Máximo 150 palabras.
         """
 
         with st.spinner('Analizando...'):
@@ -76,7 +76,7 @@ if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN", type="primary"):
     else:
         st.warning("Complete todos los campos.")
 
-# 5. RESULTADOS
+# 5. RESULTADOS DE IA
 if st.session_state.resultado_ia:
     st.markdown("### 📝 Resultado Consolidado")
     st.info(st.session_state.resultado_ia)
@@ -85,3 +85,29 @@ if st.session_state.resultado_ia:
         st.session_state.count += 1
         st.session_state.resultado_ia = ""
         st.rerun()
+
+# 6. CALCULADORA MANUAL (RESTAURADA)
+st.markdown("---")
+with st.expander("📊 CALCULADORA MANUAL DE COSTOS (DDP)"):
+    st.write("Usa esta tabla para cálculos exactos basados en dimensiones reales.")
+    mc1, mc2, mc3, mc4 = st.columns(4)
+    with mc1: l_cm = st.number_input("Largo (cm)", min_value=0.0, step=0.1)
+    with mc2: an_cm = st.number_input("Ancho (cm)", min_value=0.0, step=0.1)
+    with mc3: al_cm = st.number_input("Alto (cm)", min_value=0.0, step=0.1)
+    with mc4: p_kg = st.number_input("Peso Real (kg)", min_value=0.0, step=0.1)
+    
+    if st.button("🧮 CALCULAR COSTOS AHORA"):
+        # Cálculo de Peso Volumétrico (Estándar Internacional)
+        p_vol_kg = (l_cm * an_cm * al_cm) / 5000
+        p_final_kg = max(p_kg, p_vol_kg)
+        
+        # Selección de tarifa según origen (Miami Aéreo por defecto en este ejemplo rápido)
+        tarifa_usada = st.session_state.tarifas["mia_a"]
+        costo_est = p_final_kg * tarifa_usada
+        
+        st.success(f"""
+        **RESULTADOS DEL CÁLCULO:**
+        * Peso Volumétrico: {p_vol_kg:.2f} kg
+        * Peso a Facturar: {p_final_kg:.2f} kg
+        * **Costo Estimado DDP: ${costo_est:.2f} USD**
+        """)
