@@ -49,7 +49,7 @@ with st.sidebar:
         st.session_state.tarifas["mia_m"] = st.number_input("MIA Marítimo ($/ft³)", value=st.session_state.tarifas["mia_m"])
         st.session_state.tarifas["mad"] = st.number_input("MAD Aéreo ($/kg)", value=st.session_state.tarifas["mad"])
 
-# 3. INTERFAZ DE USUARIO (TÍTULO AJUSTADO)
+# 3. INTERFAZ DE USUARIO (TÍTULO LIMPIO)
 st.markdown("<h1 style='text-align: center;'>Inteligencia Automotriz DDP</h1>", unsafe_allow_html=True)
 st.markdown("---")
 
@@ -84,7 +84,7 @@ if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary",
                         exito = True
                         break
                 except: continue
-            if not exito: st.error("Error de comunicación con la IA.")
+            if not exito: st.error("Error de conexión con la IA.")
     else:
         st.warning("⚠️ Complete todos los campos para triangular la información.")
 
@@ -98,10 +98,16 @@ if st.session_state.resultado_ia:
         st.rerun()
 
 st.markdown("---")
+# 6. CALCULADORA MANUAL (CORREGIDA)
 with st.expander("📊 CALCULADORA MANUAL"):
-    st.write("Cálculos matemáticos directos.")
+    st.write("Cálculos matemáticos directos basados en empaque reforzado.")
     mc1, mc2, mc3, mc4 = st.columns(4)
     with mc1: l_cm = st.number_input("Largo (cm)", min_value=0.0)
     with mc2: an_cm = st.number_input("Ancho (cm)", min_value=0.0)
     with mc3: al_cm = st.number_input("Alto (cm)", min_value=0.0)
-    with mc4: p_kg = st.number_input("Peso (kg)", min_value=0.0
+    with mc4: p_kg = st.number_input("Peso (kg)", min_value=0.0)
+    
+    if st.button("🧮 CALCULAR MANUAL"):
+        p_v = (l_cm * an_cm * al_cm) / 5000
+        p_f = max(p_kg, p_v)
+        st.success(f"Peso facturable: {p_f:.2f} kg/lb | Estimado: ${p_f * st.session_state.tarifas['mia_a']:.2f}")
