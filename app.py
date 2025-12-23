@@ -101,7 +101,28 @@ if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary",
             st.stop()
 
         # CONFIGURACIÓN DEL PROMPT DDP
+        # CONFIGURACIÓN DEL PROMPT CON CONVERSIÓN DE UNIDADES
         prompt = f"""
+        ACTÚA COMO EXPERTO LOGÍSTICO AUTOMOTRIZ DDP PARA LogiPartVE.
+        
+        DATOS:
+        - Vehículo: {v_in} | Repuesto: {r_in} | N° Parte: {n_in}
+        - Ruta: {o_in} -> Venezuela vía {t_in}
+        - Tarifas: {st.session_state.tarifas}
+
+        REGLAS DE CÁLCULO ESTRICTAS:
+        1. Si el origen es MIAMI AÉREO: Debes estimar el peso en Kilos, pero CONVERTIRLO A LIBRAS (1 kg = 2.20462 lb) antes de multiplicar por la tarifa de {st.session_state.tarifas['mia_a']}.
+        2. Si el origen es MADRID AÉREO: Calcula directamente en KILOS por la tarifa de {st.session_state.tarifas['mad']}.
+        3. Si es MIAMI MARÍTIMO: Estima el volumen en PIES CÚBICOS (ft³) y multiplica por {st.session_state.tarifas['mia_m']}.
+        
+        TAREAS:
+        - Valida compatibilidad técnica de la pieza.
+        - Estima el EMPAQUE REFORZADO (Dimensiones y Peso).
+        - Muestra el desglose: "Peso estimado: X kg -> Convertido a: Y lb".
+        - COSTO TOTAL PUERTA A PUERTA: $X.XX USD (Todo incluido).
+        
+        SÉ BREVE (Máx 150 palabras).
+        """
         ACTÚA COMO EXPERTO LOGÍSTICO AUTOMOTRIZ DDP PARA LogiPartVE.
         
         DATOS DE ENTRADA:
