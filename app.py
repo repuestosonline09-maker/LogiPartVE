@@ -54,7 +54,7 @@ with st.container():
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary"):
     if v_in and r_in and n_in:
         # Usamos la ruta comercial estable (v1) para asegurar que use tus créditos de $1.1M
-        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
         
         prompt = f"""
         ACTÚA COMO EXPERTO LOGÍSTICO DE LogiPartVE. 
