@@ -3,19 +3,19 @@ import requests
 import json
 import os
 
-# 1. CONFIGURACIÓN DE PÁGINA (UI/UX PREMIUM)
+# 1. CONFIGURACIÓN DE PÁGINA (UX/UI PROFESIONAL)
 st.set_page_config(page_title="LogiPartVE Pro", layout="wide", page_icon="✈️")
 
 # Nombre del archivo en GitHub
 logo_filename = "logo.png"
 
-# --- DISEÑO DEL PANEL CENTRAL (EL BALANCE DEL DISEÑADOR) ---
-# Usamos una proporción [1.5, 1, 1.5] para que el logo tenga presencia pero no invada
+# --- DISEÑO DEL PANEL CENTRAL (LOGO BALANCEADO) ---
+# Usamos columnas laterales amplias para centrar el logo con elegancia
 c_left, c_logo, c_right = st.columns([1.5, 1, 1.5])
 with c_logo:
     if os.path.exists(logo_filename):
-        # 180px es el tamaño ideal para que el detalle del logo sea legible y estético
-        st.image(logo_filename, use_container_width=True)
+        # 180px es el tamaño ideal para visualización profesional en web
+        st.image(logo_filename, width=180)
     else:
         st.info("💡 Cargando Identidad...")
 
@@ -32,10 +32,10 @@ if 'count' not in st.session_state: st.session_state.count = 0
 if 'tarifas' not in st.session_state: 
     st.session_state.tarifas = {"mia_a": 9.0, "mia_m": 40.0, "mad": 20.0}
 
-# --- BARRA LATERAL (CONSERVA TU DISEÑO FAVORITO) ---
+# --- BARRA LATERAL (RESTAURADA CON TARIFA MADRID) ---
 with st.sidebar:
     side_c1, side_c2, side_c3 = st.columns([1, 2, 1])
-    with side_c2:
+    with side_col2 := side_c2:
         if os.path.exists(logo_filename):
             st.image(logo_filename, use_container_width=True)
     
@@ -44,13 +44,18 @@ with st.sidebar:
         st.success("Conexión Premium Activa")
     
     st.markdown("---")
-    check_pass = st.text_input("Contraseña Admin", type="password")
+    st.markdown("<h2 style='text-align: center; font-size: 18px;'>Tarifas Admin</h2>", unsafe_allow_html=True)
+    check_pass = st.text_input("Contraseña", type="password")
+    
     if check_pass == PASS_ADMIN:
+        st.success("Acceso Autorizado")
         st.session_state.tarifas["mia_a"] = st.number_input("MIA Aéreo ($/lb)", value=st.session_state.tarifas["mia_a"])
         st.session_state.tarifas["mia_m"] = st.number_input("MIA Marítimo ($/ft³)", value=st.session_state.tarifas["mia_m"])
+        # CELDA RESTAURADA: Madrid
+        st.session_state.tarifas["mad"] = st.number_input("MAD Aéreo ($/kg)", value=st.session_state.tarifas["mad"])
 
 # 3. TITULAR PROFESIONAL
-st.markdown("<h1 style='text-align: center; color: #1E3A8A; font-size: 32px; margin-top: -20px;'>Inteligencia Automotriz DDP</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: #1E3A8A; font-size: 32px; margin-top: -10px;'>Inteligencia Automotriz DDP</h1>", unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
 # 4. FORMULARIO OPERATIVO
@@ -61,14 +66,14 @@ with col3: n_in = st.text_input("Número de Parte", key=f"n_{st.session_state.co
 with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
 with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 5. MOTOR DE INTELIGENCIA
+# 5. MOTOR DE INTELIGENCIA (TRIANGULACIÓN)
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary", use_container_width=True):
     if v_in and r_in and n_in:
         prompt = f"""
         ACTÚA COMO EXPERTO LOGÍSTICO AUTOMOTRIZ DDP.
         1. Triangula: {r_in} ({n_in}) para {v_in}. Valida compatibilidad técnica.
         2. Empaque: Estima medidas y peso. Calcula medidas de EMPAQUE REFORZADO.
-        3. Costos: Cotiza DDP con {st.session_state.tarifas} ({o_in}, {t_in}).
+        3. Costos: Cotiza DDP con tarifas: {st.session_state.tarifas} (Origen: {o_in}, Envío: {t_in}).
         SÉ BREVE (máx 150 palabras).
         """
         with st.spinner('Procesando análisis técnico...'):
@@ -103,4 +108,5 @@ with st.expander("📊 CALCULADORA MANUAL"):
     if st.button("🧮 CALCULAR MANUAL"):
         p_v = (l_cm * an_cm * al_cm) / 5000
         p_f = max(p_kg, p_v)
-        st.success(f"Peso facturable: {p_f:.2f} | Estimado: ${p_f * st.session_state.tarifas['mia_a']:.2f}")
+        tarifa_actual = st.session_state.tarifas['mad'] if o_in == "Madrid" else st.session_state.tarifas['mia_a']
+        st.success(f"Peso facturable: {p_f:.2f} | Estimado: ${p_f * tarifa_actual:.2f}")
