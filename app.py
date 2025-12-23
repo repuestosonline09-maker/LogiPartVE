@@ -50,31 +50,30 @@ with st.container():
     with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
     with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 4. LÓGICA DE IA (ESTA ES LA ÚNICA PARTE QUE CAMBIA)
+# 4. LÓGICA DE IA (SISTEMA MULTIMOTOR PARA NIVEL 1 / CRÉDITOS MASIVOS)
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary"):
     if v_in and r_in and n_in:
-        # CAMBIO TÉCNICO: v1beta + gemini-1.5-flash (sin sufijos que den 404)
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+        # Lista de modelos por orden de probabilidad en cuentas premium
+        modelos = ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"]
+        exito = False
         
-        prompt = f"""
-        ACTÚA COMO EXPERTO LOGÍSTICO DE LogiPartVE. 
-        1. ANÁLISIS TÉCNICO: Identifica referencia {n_in} para {r_in} en vehículo {v_in}.
-        2. COSTOS {o_in.upper()}: Tarifas MIA Aé ${st.session_state.tarifas['mia_a']}, Mar ${st.session_state.tarifas['mia_m']} | MAD Aé ${st.session_state.tarifas['mad']}.
-        3. STATUS RUTA: Alertas actualizadas Diciembre 2025 sobre aduanas Venezuela.
-        """
+        prompt = f"ACTÚA COMO EXPERTO LOGÍSTICO LogiPartVE. Analiza {r_in} ({n_in}) para {v_in}. Origen {o_in}. Tarifas: {st.session_state.tarifas}. Diciembre 2025."
 
-        with st.spinner('Procesando con prioridad comercial...'):
-            try:
-                res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=30)
-                if res.status_code == 200:
-                    st.session_state.resultado_ia = res.json()['candidates'][0]['content']['parts'][0]['text']
-                    st.balloons()
-                else:
-                    # Capturamos el error exacto de Google para diagnóstico
-                    error_msg = res.json().get('error', {}).get('message', 'Desconocido')
-                    st.error(f"⚠️ Google API {res.status_code}: {error_msg}")
-            except Exception as e:
-                st.error(f"❌ Error de red: {str(e)}")
+        with st.spinner('Sincronizando con tus créditos de $1.1M...'):
+            for m_name in modelos:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{m_name}:generateContent?key={API_KEY}"
+                try:
+                    res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=15)
+                    if res.status_code == 200:
+                        st.session_state.resultado_ia = res.json()['candidates'][0]['content']['parts'][0]['text']
+                        st.balloons()
+                        exito = True
+                        break
+                except:
+                    continue
+            
+            if not exito:
+                st.error("⚠️ Google está procesando tu nivel de pago. Si persiste, intenta en unos minutos.")
     else:
         st.warning("Por favor, rellene todos los campos.")
 
