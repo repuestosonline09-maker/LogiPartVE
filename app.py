@@ -50,11 +50,11 @@ with st.container():
     with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
     with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 4. LÓGICA DE IA (OPTIMIZADA PARA NIVEL DE PAGO 1)
+# 4. LÓGICA DE IA (ESTA ES LA ÚNICA PARTE QUE CAMBIA)
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary"):
     if v_in and r_in and n_in:
-        # Usamos la ruta comercial estable (v1) para asegurar que use tus créditos de $1.1M
-        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key={API_KEY}"
+        # CAMBIO TÉCNICO: v1beta + gemini-1.5-flash (sin sufijos que den 404)
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
         
         prompt = f"""
         ACTÚA COMO EXPERTO LOGÍSTICO DE LogiPartVE. 
@@ -63,17 +63,18 @@ if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary")
         3. STATUS RUTA: Alertas actualizadas Diciembre 2025 sobre aduanas Venezuela.
         """
 
-        with st.spinner('Conectando con servidores premium de Google...'):
+        with st.spinner('Procesando con prioridad comercial...'):
             try:
                 res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=30)
                 if res.status_code == 200:
                     st.session_state.resultado_ia = res.json()['candidates'][0]['content']['parts'][0]['text']
                     st.balloons()
                 else:
-                    error_info = res.json().get('error', {}).get('message', 'Error desconocido')
-                    st.error(f"⚠️ Error de la API (Código {res.status_code}): {error_info}")
+                    # Capturamos el error exacto de Google para diagnóstico
+                    error_msg = res.json().get('error', {}).get('message', 'Desconocido')
+                    st.error(f"⚠️ Google API {res.status_code}: {error_msg}")
             except Exception as e:
-                st.error(f"❌ Error de conexión: {str(e)}")
+                st.error(f"❌ Error de red: {str(e)}")
     else:
         st.warning("Por favor, rellene todos los campos.")
 
@@ -87,7 +88,7 @@ if st.session_state.resultado_ia:
         st.session_state.resultado_ia = ""
         st.rerun()
 
-# 6. CALCULADORA MANUAL (DE RESPALDO)
+# 6. CALCULADORA MANUAL
 st.markdown("---")
 with st.expander("📊 Calculadora Manual de Costos"):
     mc1, mc2, mc3, mc4 = st.columns(4)
