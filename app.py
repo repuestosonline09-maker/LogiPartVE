@@ -91,17 +91,37 @@ with col3: n_in = st.text_input("Número de Parte", key=f"n_{st.session_state.co
 with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
 with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 5. BOTÓN DE ACCIÓN
+# 5. MOTOR DE INTELIGENCIA Y COTIZACIÓN (DDP PUERTA A PUERTA)
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary", use_container_width=True):
     if v_in and r_in and n_in:
+        
+        # VALIDACIÓN LOGÍSTICA ESTRICTA
+        if o_in == "Madrid" and t_in == "Marítimo":
+            st.error("⚠️ Error de Ruta: Desde Madrid solo operamos envíos AÉREOS.")
+            st.stop()
+
+        # CONFIGURACIÓN DEL PROMPT DDP
         prompt = f"""
-        ACTÚA COMO EXPERTO LOGÍSTICO AUTOMOTRIZ DDP.
-        1. Triangula: {r_in} ({n_in}) para {v_in}.
-        2. Empaque: Estima medidas y peso del empaque reforzado.
-        3. Costos: Cotiza DDP con tarifas: {st.session_state.tarifas} (Origen: {o_in}, Envío: {t_in}).
-        SÉ BREVE.
+        ACTÚA COMO EXPERTO LOGÍSTICO AUTOMOTRIZ DDP PARA LogiPartVE.
+        
+        DATOS DE ENTRADA:
+        - Vehículo: {v_in} | Repuesto: {r_in} | N° Parte: {n_in}
+        - Ruta: {o_in} -> Venezuela vía {t_in}
+        - Tarifas configuradas (Monto único Puerta a Puerta): {st.session_state.tarifas}
+
+        TAREAS:
+        1. VALIDACIÓN: Confirma si el N° de parte coincide con el repuesto y vehículo.
+        2. EXPERTICIA EN EMPAQUE: Estima las dimensiones y peso neto del repuesto. Calcula el PESO/VOLUMEN final aplicando un EMPAQUE REFORZADO para transporte internacional.
+        3. CÁLCULO DDP: Multiplica el peso/volumen del empaque reforzado EXCLUSIVAMENTE por la tarifa de la celda correspondiente.
+        4. REGLA DE NEGOCIO CRÍTICA: El servicio es PUERTA A PUERTA e incluye TODO (Adunas, Aranceles, Manejo). NO menciones ni sumes gastos extra.
+
+        FORMATO DE RESPUESTA (Sé breve, máximo 150 palabras):
+        - Breve análisis técnico de compatibilidad.
+        - Especificaciones del empaque reforzado estimado.
+        - COSTO TOTAL PUERTA A PUERTA: $X.XX USD (Incluye todo).
         """
-        with st.spinner('Analizando datos técnicos...'):
+        
+        with st.spinner('Triangulando información y calculando empaque reforzado...'):
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
                 res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=20)
@@ -109,11 +129,11 @@ if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary",
                     st.session_state.resultado_ia = res.json()['candidates'][0]['content']['parts'][0]['text']
                     st.balloons()
                 else:
-                    st.error(f"Error en IA: {res.status_code}")
+                    st.error(f"Error en la IA: {res.status_code}")
             except Exception as e:
-                st.error(f"Error de red: {str(e)}")
+                st.error(f"Error de conexión: {str(e)}")
     else:
-        st.warning("⚠️ Complete todos los campos.")
+        st.warning("⚠️ Por favor, complete todos los campos para realizar la cotización.")
 
 # 6. RESULTADOS
 if st.session_state.resultado_ia:
