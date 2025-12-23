@@ -7,18 +7,16 @@ import base64
 # 1. CONFIGURACIÓN DE PÁGINA PROFESIONAL
 st.set_page_config(page_title="LogiPartVE Pro", layout="wide", page_icon="✈️")
 
-# Nombre del archivo de imagen en tu repositorio
+# Nombre del archivo de imagen
 logo_filename = "logo.png"
 
 # --- LÓGICA DE DISEÑO ADAPTABLE (CSS) ---
 st.markdown(
     """
     <style>
-    /* Ajuste para móviles */
     @media (max-width: 640px) {
         .main-logo-container { width: 120px !important; margin: 0 auto; }
     }
-    /* Ajuste para PC */
     @media (min-width: 641px) {
         .main-logo-container { width: 180px !important; margin: 0 auto; }
     }
@@ -50,16 +48,14 @@ if 'tarifas' not in st.session_state:
 c_left, c_logo, c_right = st.columns([1.5, 1, 1.5])
 with c_logo:
     if os.path.exists(logo_filename):
-        # Convertimos imagen a base64 para aplicar el tamaño adaptable
         with open(logo_filename, "rb") as f:
             data = base64.b64encode(f.read()).decode()
         st.markdown(f'<div class="main-logo-container"><img src="data:image/png;base64,{data}" style="width:100%"></div>', unsafe_allow_html=True)
     else:
-        st.warning("💡 Logo 'logo.png' no detectado en GitHub.")
+        st.info("💡 Cargando logo...")
 
 # --- BARRA LATERAL (ADMIN) ---
 with st.sidebar:
-    # Espaciado para el logo en sidebar
     sc1, sc2, sc3 = st.columns([1, 2, 1])
     with sc2:
         if os.path.exists(logo_filename):
@@ -91,58 +87,38 @@ with col3: n_in = st.text_input("Número de Parte", key=f"n_{st.session_state.co
 with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
 with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 5. MOTOR DE INTELIGENCIA Y COTIZACIÓN (DDP PUERTA A PUERTA)
+# 5. MOTOR DE INTELIGENCIA (DDP PUERTA A PUERTA CON CONVERSIÓN)
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary", use_container_width=True):
     if v_in and r_in and n_in:
-        
-        # VALIDACIÓN LOGÍSTICA ESTRICTA
+        # VALIDACIÓN LOGÍSTICA
         if o_in == "Madrid" and t_in == "Marítimo":
             st.error("⚠️ Error de Ruta: Desde Madrid solo operamos envíos AÉREOS.")
             st.stop()
 
-        # CONFIGURACIÓN DEL PROMPT DDP
-        # CONFIGURACIÓN DEL PROMPT CON CONVERSIÓN DE UNIDADES
+        # PROMPT CON LÓGICA DE UNIDADES
         prompt = f"""
         ACTÚA COMO EXPERTO LOGÍSTICO AUTOMOTRIZ DDP PARA LogiPartVE.
         
         DATOS:
-        - Vehículo: {v_in} | Repuesto: {r_in} | N° Parte: {n_in}
+        - Repuesto: {r_in} ({n_in}) para {v_in}
         - Ruta: {o_in} -> Venezuela vía {t_in}
         - Tarifas: {st.session_state.tarifas}
 
-        REGLAS DE CÁLCULO ESTRICTAS:
-        1. Si el origen es MIAMI AÉREO: Debes estimar el peso en Kilos, pero CONVERTIRLO A LIBRAS (1 kg = 2.20462 lb) antes de multiplicar por la tarifa de {st.session_state.tarifas['mia_a']}.
-        2. Si el origen es MADRID AÉREO: Calcula directamente en KILOS por la tarifa de {st.session_state.tarifas['mad']}.
-        3. Si es MIAMI MARÍTIMO: Estima el volumen en PIES CÚBICOS (ft³) y multiplica por {st.session_state.tarifas['mia_m']}.
+        REGLAS DE CÁLCULO ESTRICTAS (PUERTA A PUERTA):
+        1. Si es MIAMI AÉREO: Estima peso en Kilos, pero CONVIÉRTELO a Libras (1 kg = 2.20462 lb) y multiplica por {st.session_state.tarifas['mia_a']} $/lb.
+        2. Si es MADRID AÉREO: Calcula directamente en KILOS por la tarifa {st.session_state.tarifas['mad']} $/kg.
+        3. Si es MIAMI MARÍTIMO: Calcula el volumen en Pies Cúbicos (ft³) por la tarifa {st.session_state.tarifas['mia_m']} $/ft³.
         
-        TAREAS:
-        - Valida compatibilidad técnica de la pieza.
-        - Estima el EMPAQUE REFORZADO (Dimensiones y Peso).
-        - Muestra el desglose: "Peso estimado: X kg -> Convertido a: Y lb".
-        - COSTO TOTAL PUERTA A PUERTA: $X.XX USD (Todo incluido).
+        INSTRUCCIONES:
+        - Valida compatibilidad técnica.
+        - Estima dimensiones y peso del EMPAQUE REFORZADO.
+        - Muestra el cálculo: "Peso/Volumen estimado -> Tarifa aplicada".
+        - NO sumes gastos extras (Aduana/Arancel ya incluidos).
         
         SÉ BREVE (Máx 150 palabras).
         """
-        ACTÚA COMO EXPERTO LOGÍSTICO AUTOMOTRIZ DDP PARA LogiPartVE.
         
-        DATOS DE ENTRADA:
-        - Vehículo: {v_in} | Repuesto: {r_in} | N° Parte: {n_in}
-        - Ruta: {o_in} -> Venezuela vía {t_in}
-        - Tarifas configuradas (Monto único Puerta a Puerta): {st.session_state.tarifas}
-
-        TAREAS:
-        1. VALIDACIÓN: Confirma si el N° de parte coincide con el repuesto y vehículo.
-        2. EXPERTICIA EN EMPAQUE: Estima las dimensiones y peso neto del repuesto. Calcula el PESO/VOLUMEN final aplicando un EMPAQUE REFORZADO para transporte internacional.
-        3. CÁLCULO DDP: Multiplica el peso/volumen del empaque reforzado EXCLUSIVAMENTE por la tarifa de la celda correspondiente.
-        4. REGLA DE NEGOCIO CRÍTICA: El servicio es PUERTA A PUERTA e incluye TODO (Adunas, Aranceles, Manejo). NO menciones ni sumes gastos extra.
-
-        FORMATO DE RESPUESTA (Sé breve, máximo 150 palabras):
-        - Breve análisis técnico de compatibilidad.
-        - Especificaciones del empaque reforzado estimado.
-        - COSTO TOTAL PUERTA A PUERTA: $X.XX USD (Incluye todo).
-        """
-        
-        with st.spinner('Triangulando información y calculando empaque reforzado...'):
+        with st.spinner('Triangulando información y calculando unidades...'):
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
                 res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=20)
@@ -150,15 +126,15 @@ if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary",
                     st.session_state.resultado_ia = res.json()['candidates'][0]['content']['parts'][0]['text']
                     st.balloons()
                 else:
-                    st.error(f"Error en la IA: {res.status_code}")
+                    st.error(f"Error en IA: {res.status_code}")
             except Exception as e:
-                st.error(f"Error de conexión: {str(e)}")
+                st.error(f"Error de red: {str(e)}")
     else:
-        st.warning("⚠️ Por favor, complete todos los campos para realizar la cotización.")
+        st.warning("⚠️ Complete todos los campos.")
 
 # 6. RESULTADOS
 if st.session_state.resultado_ia:
-    st.markdown("### 📝 Análisis y Cotización")
+    st.markdown("### 📝 Análisis y Cotización Final")
     st.info(st.session_state.resultado_ia)
     if st.button("🗑️ NUEVA CONSULTA", use_container_width=True):
         st.session_state.count += 1
@@ -167,7 +143,7 @@ if st.session_state.resultado_ia:
 
 st.markdown("---")
 
-# 7. CALCULADORA MANUAL
+# 7. CALCULADORA MANUAL (CONVERSIÓN DE UNIDADES INCLUIDA)
 with st.expander("📊 CALCULADORA MANUAL"):
     mc1, mc2, mc3, mc4 = st.columns(4)
     with mc1: l_cm = st.number_input("Largo (cm)", min_value=0.0, format="%.1f")
@@ -177,6 +153,15 @@ with st.expander("📊 CALCULADORA MANUAL"):
     
     if st.button("🧮 CALCULAR MANUALMENTE"):
         p_v = (l_cm * an_cm * al_cm) / 5000
-        p_f = max(p_kg, p_v)
-        tarifa = st.session_state.tarifas['mad'] if o_in == "Madrid" else st.session_state.tarifas['mia_a']
-        st.success(f"Peso facturable: {p_f:.2f} kg/lb | Estimado: ${p_f * tarifa:.2f}")
+        p_final_kg = max(p_kg, p_v)
+        
+        if o_in == "Madrid":
+            p_facturable = p_final_kg
+            unidad = "kg"
+            tarifa = st.session_state.tarifas['mad']
+        else:
+            p_facturable = p_final_kg * 2.20462  # Conversión a Libras para Miami
+            unidad = "lb"
+            tarifa = st.session_state.tarifas['mia_a']
+            
+        st.success(f"Peso facturable: {p_facturable:.2f} {unidad} | Total DDP: ${p_facturable * tarifa:.2f}")
