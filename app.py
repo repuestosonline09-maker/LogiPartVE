@@ -83,14 +83,14 @@ with col3: n_in = st.text_input("Número de Parte", key=f"n_{st.session_state.co
 with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
 with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 5. MOTOR DE INTELIGENCIA (VERIFICACIÓN OEM REAL + RADAR GEOPOLÍTICO)
+# 5. MOTOR DE INTELIGENCIA (RESTAURACIÓN DE RIGOR TÉCNICO + RADAR)
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary", use_container_width=True):
     if v_in and r_in and n_in:
         if o_in == "Madrid" and t_in == "Marítimo":
             st.error("⚠️ Error: Madrid solo permite envíos Aéreos.")
             st.stop()
 
-        # Lógica de cálculo estricta en Python
+        # Selección de tarifa (Python controla la matemática)
         if o_in == "Miami":
             tarifa_uso = st.session_state.tarifas['mia_a'] if t_in == "Aéreo" else st.session_state.tarifas['mia_m']
             unidad_uso = "lb" if t_in == "Aéreo" else "ft³"
@@ -99,50 +99,40 @@ if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary",
             unidad_uso = "kg"
 
         prompt = f"""
-        SISTEMA DE VERIFICACIÓN LOGIPARTVE - FECHA: 24/12/2025
+        ERES UN PERITO TÉCNICO AUTOMOTRIZ DE LogiPartVE. TU MISIÓN ES LA AUDITORÍA TOTAL.
         
-        OBJETIVO: Validar compatibilidad real y calcular envío DDP.
-        
-        DATOS SUMINISTRADOS:
-        - Repuesto: {r_in}
-        - Vehículo: {v_in}
-        - N° de Parte: {n_in}
-        - Ruta: {o_in} ({t_in}) | Tarifa: {tarifa_uso} x {unidad_uso}
+        TAREA 1: AUDITORÍA TÉCNICA (CERO TOLERANCIA):
+        - Evalúa: {r_in} para {v_in} con N° de Parte {n_in}.
+        - Si el número {n_in} es inventado, muy largo, o no existe en catálogos de Mopar, AC Delco, Motorcraft o marcas OEM, reporta: "❌ ERROR: NÚMERO DE PARTE INVÁLIDO".
+        - Si el número es de otra pieza (ej: pusiste radiador y el número es de bomba), denúncialo.
+        - SÓLO si el número es real y correcto, procede con "✅ COMPATIBILIDAD VERIFICADA".
 
-        TAREA 1: BÚSQUEDA Y VALIDACIÓN (USA TU BASE DE DATOS Y BÚSQUEDA):
-        1. Busca el N° de parte {n_in}. 
-        2. Si el número coincide EXACTAMENTE con el {r_in} para el {v_in} (como el caso del Fan Clutch de Jeep), confirma la validez con entusiasmo profesional.
-        3. Solo si hay una discrepancia técnica total e indiscutible, reporta un error. No inventes errores.
+        TAREA 2: LOGÍSTICA Y COSTO DDP:
+        - Calcula medidas y peso de un {r_in} real.
+        - Usa el peso mayor entre Real y Volumétrico (LxAnxAl/5000).
+        - Aplica tarifa {tarifa_uso} x Medida Facturable. Mínimo obligatorio $25.00 USD.
+        - No inventes cargos de seguro o aduana extras. La tarifa ya es DDP.
 
-        TAREA 2: CÁLCULO LOGÍSTICO (RESUMIDO):
-        - Estima dimensiones y peso real de un {r_in} de este tipo.
-        - Calcula el peso volumétrico (LxAnxAl/5000).
-        - Calcula el Costo Total DDP (Tarifa {tarifa_uso} x Medida Facturable). 
-        - Si el total es menor a $25.00, el resultado es $25.00 USD.
-        - IMPORTANTE: No desgloses cargos extras. El precio debe ser ÚNICO y FINAL.
+        TAREA 3: RADAR LOGÍSTICO (RESUMIDO):
+        - HOY ES 24 DE DICIEMBRE DE 2025.
+        - Informa exclusivamente noticias de alto impacto: Bloqueos navales reales en el Caribe, huelgas de transporte o retrasos críticos por temporada.
 
-        TAREA 3: RADAR GEOPOLÍTICO Y NOTICIAS (SITUACIÓN CARIBE/VENEZUELA):
-        - Investiga y reporta noticias REALES de HOY 24 de diciembre de 2025.
-        - Incluye alertas sobre: Presencia militar en el Caribe, restricciones de vuelos actuales, bloqueos navales o saturación de puertos por temporada navideña.
-
-        FORMATO DE RESPUESTA (ESTRICTO):
-        🛠️ **DIAGNÓSTICO TÉCNICO**: [Veredicto de compatibilidad basado en datos reales]
-        📦 **DETALLES DE ENVÍO**: [Dimensiones y Peso Facturable]
-        💰 **COSTO TOTAL DDP**: $[Monto] USD (Precio Final Puerta a Puerta)
+        FORMATO DE SALIDA:
+        🛠️ **DIAGNÓSTICO TÉCNICO**: [Veredicto]
+        📦 **DETALLES DE ENVÍO**: [Datos del empaque y peso]
+        💰 **COSTO TOTAL DDP**: $[Monto] USD
         📡 **RADAR LOGÍSTICO (24/12/2025)**:
-           • ⚠️ [Alerta técnica o aduanal]
-           • 🌍 [Noticia Geopolítica o Clima Crítico de HOY]
+           • [Noticia Real]
         """
         
-        with st.spinner('Accediendo a catálogos OEM y radares globales...'):
+        with st.spinner('Perito LogiPartVE auditando información...'):
             try:
-                # Utilizamos el modelo Gemini 2.0 Flash que es más preciso en búsquedas
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
                 res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=20)
                 if res.status_code == 200:
                     st.session_state.resultado_ia = res.json()['candidates'][0]['content']['parts'][0]['text']
                     st.balloons()
-            except: st.error("Error de conexión con el motor de inteligencia.")
+            except: st.error("Error de conexión.")
     else:
         st.warning("⚠️ Complete todos los campos.")
 
