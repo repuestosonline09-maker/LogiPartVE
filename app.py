@@ -59,14 +59,14 @@ with col3: n_in = st.text_input("Número de Parte", key=f"n_{st.session_state.co
 with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
 with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 5. MOTOR DE INTELIGENCIA (SOLO SE ACTUALIZÓ EL PROMPT PARA EVITAR ALUCINACIONES)
+# 5. MOTOR DE INTELIGENCIA (AJUSTE TÉCNICO: INTERCAMBIOS OEM/AFTERMARKET)
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary", use_container_width=True):
     if v_in and r_in and n_in:
         if o_in == "Madrid" and t_in == "Marítimo":
             st.error("⚠️ Error: Madrid solo permite envíos Aéreos.")
             st.stop()
 
-        # BLOQUE DE CÁLCULO PREVIO (PARA PROTEGER LA LÓGICA)
+        # Selección de tarifa única (Mantiene la lógica de cálculo protegida)
         if o_in == "Miami":
             tarifa_uso = st.session_state.tarifas['mia_a'] if t_in == "Aéreo" else st.session_state.tarifas['mia_m']
             unidad_uso = "Libras (lb)" if t_in == "Aéreo" else "Pies Cúbicos (ft³)"
@@ -74,39 +74,51 @@ if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary",
             tarifa_uso = st.session_state.tarifas['mad']
             unidad_uso = "Kilogramos (kg)"
 
-        # NUEVO PROMPT: MÁS RIGUROSO TÉCNICAMENTE SIN TOCAR LA MATEMÁTICA
+        # PROMPT CON EL NUEVO CEREBRO DE INTERCAMBIOS
         prompt = f"""
-        ACTÚA COMO EL INSPECTOR TÉCNICO SENIOR DE LogiPartVE. 
-        Tu prioridad absoluta es la PRECISIÓN TÉCNICA OEM. No aceptes datos dudosos.
+        ACTÚA COMO EL EXPERTO SENIOR EN REPUESTOS AUTOMOTRICES DE LogiPartVE. 
+        Tu conocimiento abarca catálogos ORIGINALES (OEM) y marcas AFTERMARKET líderes (Denso, Bosch, AC Delco, Motorcraft, KYB, etc.).
 
         DATOS A VALIDAR:
-        - Vehículo: {v_in}
-        - Repuesto: {r_in}
-        - N° de Parte ingresado: {n_in}
-        - Ruta: {o_in} ({t_in}) | Tarifa: {tarifa_uso} por {unidad_uso}
+        - Vehículo: {v_in} | Repuesto: {r_in} | N° de Parte ingresado: {n_in}
+        - Ruta: {o_in} ({t_in}) | Tarifa DDP: {tarifa_uso} por {unidad_uso}
 
-        TAREA 1: INSPECCIÓN OEM RIGUROSA (SIN COMPLACENCIA):
-        - Cruza el N° de parte {n_in} con el vehículo {v_in}. 
-        - Si el número {n_in} NO existe en catálogos reales o NO corresponde a esa pieza, DEBES decir: "⚠️ ERROR TÉCNICO: El N° de parte {n_in} no es correcto para este vehículo".
-        - Proporciona de inmediato el N° de parte OEM REAL y ACTUALIZADO. 
-        - No digas "excelente elección" si el número es falso o inventado.
+        TAREA 1: VALIDACIÓN TÉCNICA Y CRUCE DE REFERENCIAS:
+        1. Cruza el N° de parte {n_in} con el vehículo {v_in}. 
+        2. Identifica si es un número Original o de una marca Aftermarket reconocida (como Denso, Bosch, etc.).
+        3. Si es de una marca Aftermarket, verifica si INTERCAMBIA (Cross-Reference) con el original.
+        4. Si el intercambio es válido, CONFIRMA la compatibilidad. Si es erróneo, indica el error y sugiere el OEM correcto.
 
-        TAREA 2: LOGÍSTICA DE RUTA ÚNICA:
-        - Basado en el repuesto REAL (el correcto), define Largo, Ancho, Alto (cm) y Peso (kg) del empaque REFORZADO.
+        TAREA 2: LOGÍSTICA DE RUTA ÚNICA (MATEMÁTICA PROTEGIDA):
+        - Define Largo, Ancho, Alto (cm) y Peso (kg) del empaque REFORZADO para esta pieza.
         - Calcula Peso Volumétrico (LxAnxAl/5000). Usa el MAYOR entre Real y Volumétrico.
         - Calcula el costo multiplicando ÚNICAMENTE por {tarifa_uso}.
-        - Miami Aéreo: convierte a lb (x 2.20462). Miami Marítimo: usa ft³ (cm3/28316.8). Madrid: usa kg.
+        - Miami Aéreo: lb (kg x 2.20462). Miami Marítimo: ft³ (cm3/28316.8). Madrid: kg.
         - PROHIBIDO mostrar o calcular costos de otras rutas.
 
         TAREA 3: REGLA DE ORO DEL MÍNIMO:
-        - Si el costo total es < $25.00 USD, establece el total en $25.00 USD.
+        - Si el costo total calculado es MENOR a $25.00 USD, establece el total en $25.00 USD.
         - Muestra obligatoriamente: "⚠️ Se aplica tarifa mínima de envío ($25.00)".
 
         RESULTADO FINAL:
-        - Diagnóstico Técnico (¿Es correcto el N°?).
+        - Diagnóstico Técnico (Validación de compatibilidad e intercambio de marca).
         - Especificaciones del empaque reforzado.
-        - COSTO TOTAL DDP: $XX.XX USD.
+        - COSTO TOTAL DDP: $XX.XX USD (Puerta a puerta, todo incluido).
         """
+        
+        with st.spinner('Inspector LogiPartVE validando pieza y cruce de referencias...'):
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
+                res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=20)
+                if res.status_code == 200:
+                    st.session_state.resultado_ia = res.json()['candidates'][0]['content']['parts'][0]['text']
+                    st.balloons()
+                else:
+                    st.error("Error en respuesta de IA.")
+            except:
+                st.error("Error de conexión.")
+    else:
+        st.warning("⚠️ Complete todos los campos.")
         
         with st.spinner('Inspector LogiPartVE validando pieza OEM...'):
             try:
