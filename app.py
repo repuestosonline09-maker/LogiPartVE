@@ -83,33 +83,41 @@ with col3: n_in = st.text_input("Número de Parte", key=f"n_{st.session_state.co
 with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
 with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 5. CEREBRO TÉCNICO: EL ASESOR DE REPUESTOS
+# 5. CEREBRO TÉCNICO: EL ASESOR EXPERTO Y CONSULTOR OEM
 if st.button("🚀 GENERAR ANÁLISIS TÉCNICO", type="primary", use_container_width=True):
     if v_in and r_in and n_in:
         prompt_tecnico = f"""
-        ERES UN PERITO TÉCNICO AUTOMOTRIZ OEM.
-        TU MISIÓN: Validar compatibilidad y definir medidas físicas de empaque.
-        
-        DATOS: {r_in} | {n_in} | {v_in}.
+        ERES EL PERITO TÉCNICO SENIOR DE LogiPartVE. 
+        EXPERTO EN CATÁLOGOS OEM (MOPAR, MOTORCRAFT, AC DELCO, TOYOTA, ETC.) Y MARCAS GENÉRICAS DE ALTO NIVEL.
 
-        1. AUDITORÍA: Verifica si el N° {n_in} pertenece a {r_in} para {v_in}. 
-           - Si el número es inventado o de otro auto: Reporta "❌ ERROR CRÍTICO".
-        2. MEDIDAS: Define Largo, Ancho, Alto (cm) y Peso (kg) del empaque REFORZADO.
+        DATOS A EVALUAR:
+        - Vehículo: {v_in}
+        - Repuesto: {r_in}
+        - N° de Parte dado por cliente: {n_in}
 
-        RESPONDE EXCLUSIVAMENTE ASÍ:
-        VERDICTO: [Tu análisis técnico aquí]
-        MEDIDAS_CM: [L]x[An]x[Al]
-        PESO_KG: [Valor]
+        TAREA 1: AUDITORÍA Y CONSULTORÍA TÉCNICA:
+        1. VALIDACIÓN: ¿El N° {n_in} es correcto para un {r_in} de {v_in}?
+        2. SI HAY ERROR: Como experto, identifica que el número dado NO corresponde. 
+           - **INSTRUCCIÓN ESPECIAL**: Según la descripción del vehículo ({v_in}) y el nombre del repuesto ({r_in}), SUGIERE los números de parte originales (OEM) o sustitutos correctos. 
+           - Di algo como: "El número ingresado no coincide, pero para su vehículo el correcto es [N° sugerido]. Por favor valide esta información y reintente."
+        3. SI ES CORRECTO: Confirma la pieza y menciona si es un número sustituto o de marca genérica reconocida.
+
+        TAREA 2: MEDIDAS PARA LOGÍSTICA:
+        - Define Largo, Ancho, Alto (cm) y Peso (kg) del empaque REFORZADO para el repuesto CORRECTO (el que tú sugieres o el validado).
+
+        RESPONDE ÚNICAMENTE CON ESTE FORMATO:
+        VERDICTO: [Tu análisis técnico, sugerencias de números correctos y advertencias]
+        DATOS_FISICOS: [Largo]x[Ancho]x[Alto]cm | [Peso]kg
         """
-        with st.spinner('El Asesor Técnico está verificando la pieza...'):
+
+        with st.spinner('El Perito está consultando catálogos y validando números...'):
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
                 res = requests.post(url, json={"contents": [{"parts": [{"text": prompt_tecnico}]}]}, timeout=20)
                 if res.status_code == 200:
-                    # Guardamos la respuesta técnica pura
                     st.session_state.raw_tecnico = res.json()['candidates'][0]['content']['parts'][0]['text']
                 else: st.error("Error en el Asesor Técnico.")
-            except: st.error("Sin conexión al Asesor.")
+            except: st.error("Sin conexión al motor de inteligencia.")
     else:
         st.warning("⚠️ Complete todos los campos.")
 
