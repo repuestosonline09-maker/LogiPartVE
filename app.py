@@ -152,14 +152,24 @@ if st.session_state.resultado_ia:
 
 st.markdown("---")
 
-# 7. CALCULADORA MANUAL (ACTUALIZADA CON BOTÓN DE LIMPIEZA)
-with st.expander("📊 CALCULADORA MANUAL"):
-    # Inicializamos un contador para los campos manuales si no existe
+# 7. CALCULADORA MANUAL INDEPENDIENTE (CON SELECTORES PROPIOS)
+with st.expander("📊 CALCULADORA MANUAL INDEPENDIENTE"):
+    st.write("Realice cálculos rápidos sin afectar la cotización de la IA.")
+    
+    # 7.1 Selectores de control propios de la tabla
+    c1, c2 = st.columns(2)
+    with c1:
+        origen_m = st.selectbox("Origen del Envío", ["Miami", "Madrid"], key="origen_manual")
+    with c2:
+        # Si es Madrid, solo permitimos Aéreo por lógica de negocio
+        opciones_envio = ["Aéreo"] if origen_m == "Madrid" else ["Aéreo", "Marítimo"]
+        tipo_m = st.selectbox("Tipo de Envío", opciones_envio, key="tipo_manual")
+
+    # 7.2 Campos de dimensiones
     if 'clean_manual' not in st.session_state:
         st.session_state.clean_manual = 0
 
     mc1, mc2, mc3, mc4 = st.columns(4)
-    # Usamos el contador en el key para permitir el reseteo
     with mc1: l_cm = st.number_input("Largo (cm)", min_value=0.0, format="%.1f", key=f"l_{st.session_state.clean_manual}")
     with mc2: an_cm = st.number_input("Ancho (cm)", min_value=0.0, format="%.1f", key=f"an_{st.session_state.clean_manual}")
     with mc3: al_cm = st.number_input("Alto (cm)", min_value=0.0, format="%.1f", key=f"al_{st.session_state.clean_manual}")
@@ -168,30 +178,51 @@ with st.expander("📊 CALCULADORA MANUAL"):
     col_btn1, col_btn2 = st.columns(2)
     
     with col_btn1:
-        if st.button("🧮 CALCULAR MANUALMENTE", use_container_width=True):
+        if st.button("🧮 CALCULAR AHORA", use_container_width=True):
             vol_cm3 = l_cm * an_cm * al_cm
-            p_vol = vol_cm3 / 5000
-            p_mayor_kg = max(p_kg_in, p_vol)
             
-            if o_in == "Miami" and t_in == "Marítimo":
-                unit_val = vol_cm3 / 28316.8
-                costo = unit_val * st.session_state.tarifas['mia_m']
-                label = f"{unit_val:.2f} ft³"
-            elif o_in == "Madrid":
-                costo = p_mayor_kg * st.session_state.tarifas['mad']
-                label = f"{p_mayor_kg:.2f} kg"
+            # LÓGICA INDEPENDIENTE POR RUTA
+            if origen_m == "Miami" and tipo_m == "Marítimo":
+                # Marítimo: Pies Cúbicos
+                ft3 = vol_cm3 / 28316.8
+                costo_base = ft3 * st.session_state.tarifas['mia_m']
+                dato_facturable = f"{ft3:.2f} ft³"
+                tarifa_aplicada = st.session_state.tarifas['mia_m']
+            
+            elif origen_m == "Madrid":
+                # Madrid: Kilos (Mayor entre Real y Volumétrico)
+                p_vol = vol_cm3 / 5000
+                p_mayor = max(p_kg_in, p_vol)
+                costo_base = p_mayor * st.session_state.tarifas['mad']
+                dato_facturable = f"{p_mayor:.2f} kg"
+                tarifa_aplicada = st.session_state.tarifas['mad']
+            
             else: # Miami Aéreo
-                unit_val = p_mayor_kg * 2.20462
-                costo = unit_val * st.session_state.tarifas['mia_a']
-                label = f"{unit_val:.2f} lb"
+                # Miami Aéreo: Libras (Mayor entre Real y Volumétrico)
+                p_vol = vol_cm3 / 5000
+                p_mayor_kg = max(p_kg_in, p_vol)
+                p_libras = p_mayor_kg * 2.20462
+                costo_base = p_libras * st.session_state.tarifas['mia_a']
+                dato_facturable = f"{p_libras:.2f} lb"
+                tarifa_aplicada = st.session_state.tarifas['mia_a']
 
-            if costo < 25.0:
-                st.warning(f"Cálculo: ${costo:.2f}. Se aplica TARIFA MÍNIMA DE $25.00")
-                costo = 25.0
-                
-            st.success(f"Dato Facturable: {label} | TOTAL DDP: ${costo:.2f}")
+            # VALIDACIÓN DE TARIFA MÍNIMA
+            if costo_base < 25.0:
+                total_final = 25.0
+                st.warning(f"⚠️ El monto calculado (${costo_base:.2f}) no alcanza el mínimo. Se cobrarán $25.00")
+            else:
+                total_final = costo_base
+                st.success("✅ Cálculo procesado correctamente")
+
+            st.markdown(f"""
+            **RESULTADO DE OPERACIÓN:**
+            * **Ruta:** {origen_m} vía {tipo_m}
+            * **Tarifa base:** ${tarifa_aplicada}
+            * **Medida Facturable:** {dato_facturable}
+            * **TOTAL DDP:** ${total_final:.2f}
+            """)
 
     with col_btn2:
-        if st.button("🧹 LIMPIAR CALCULADORA", use_container_width=True):
+        if st.button("🧹 LIMPIAR TABLA", use_container_width=True):
             st.session_state.clean_manual += 1
             st.rerun()
