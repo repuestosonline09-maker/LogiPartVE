@@ -156,20 +156,21 @@ st.markdown("---")
 with st.expander("📊 CALCULADORA MANUAL INDEPENDIENTE"):
     st.write("Realice cálculos rápidos sin afectar la cotización de la IA.")
     
-    # 7.1 Selectores de control propios con valores por defecto
+    # 7.1 INICIALIZACIÓN DE SEGURIDAD (Para evitar AttributeError)
+    if 'clean_manual' not in st.session_state:
+        st.session_state.clean_manual = 0
+    
+    # 7.2 Selectores de control propios
     c1, c2 = st.columns(2)
     with c1:
         # Miami es el índice 0
         origen_m = st.selectbox("Origen del Envío", ["Miami", "Madrid"], index=0, key=f"or_manual_{st.session_state.clean_manual}")
     with c2:
-        # Aéreo es el índice 0
+        # Lógica de envío: Aéreo es índice 0
         opciones_envio = ["Aéreo"] if origen_m == "Madrid" else ["Aéreo", "Marítimo"]
         tipo_m = st.selectbox("Tipo de Envío", opciones_envio, index=0, key=f"ti_manual_{st.session_state.clean_manual}")
 
-    # 7.2 Campos de dimensiones con reset
-    if 'clean_manual' not in st.session_state:
-        st.session_state.clean_manual = 0
-
+    # 7.3 Campos de dimensiones
     mc1, mc2, mc3, mc4 = st.columns(4)
     with mc1: l_cm = st.number_input("Largo (cm)", min_value=0.0, format="%.1f", key=f"l_{st.session_state.clean_manual}")
     with mc2: an_cm = st.number_input("Ancho (cm)", min_value=0.0, format="%.1f", key=f"an_{st.session_state.clean_manual}")
@@ -212,6 +213,5 @@ with st.expander("📊 CALCULADORA MANUAL INDEPENDIENTE"):
 
     with col_btn2:
         if st.button("🧹 LIMPIAR TABLA", use_container_width=True):
-            # Aumentar el contador cambia los keys de los selectores, forzándolos al 'index=0'
             st.session_state.clean_manual += 1
             st.rerun()
