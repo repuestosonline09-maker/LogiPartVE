@@ -83,112 +83,85 @@ with col3: n_in = st.text_input("Número de Parte", key=f"n_{st.session_state.co
 with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
 with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 5. CEREBRO TÉCNICO: EL ASESOR EXPERTO Y CONSULTOR OEM
+# 5. CEREBRO TÉCNICO: EL ASESOR EXPERTO (REFORZADO)
 if st.button("🚀 GENERAR ANÁLISIS TÉCNICO", type="primary", use_container_width=True):
     if v_in and r_in and n_in:
         prompt_tecnico = f"""
         ERES EL PERITO TÉCNICO SENIOR DE LogiPartVE. 
-        EXPERTO EN CATÁLOGOS OEM (MOPAR, MOTORCRAFT, AC DELCO, TOYOTA, ETC.) Y MARCAS GENÉRICAS DE ALTO NIVEL.
+        TU MISIÓN: VALIDAR COMPATIBILIDAD Y ENTREGAR MEDIDAS PARA CÁLCULO.
 
-        DATOS A EVALUAR:
-        - Vehículo: {v_in}
-        - Repuesto: {r_in}
-        - N° de Parte dado por cliente: {n_in}
+        DATOS: {r_in} | {n_in} | {v_in}.
 
-        TAREA 1: AUDITORÍA Y CONSULTORÍA TÉCNICA:
-        1. VALIDACIÓN: ¿El N° {n_in} es correcto para un {r_in} de {v_in}?
-        2. SI HAY ERROR: Como experto, identifica que el número dado NO corresponde. 
-           - **INSTRUCCIÓN ESPECIAL**: Según la descripción del vehículo ({v_in}) y el nombre del repuesto ({r_in}), SUGIERE los números de parte originales (OEM) o sustitutos correctos. 
-           - Di algo como: "El número ingresado no coincide, pero para su vehículo el correcto es [N° sugerido]. Por favor valide esta información y reintente."
-        3. SI ES CORRECTO: Confirma la pieza y menciona si es un número sustituto o de marca genérica reconocida.
+        TAREA:
+        1. VALIDA el N° {n_in}. Si es incorrecto, SUGIERE el OEM correcto para {v_in}.
+        2. ESTIMA medidas de empaque reforzado (L, An, Al en cm) y peso (kg).
 
-        TAREA 2: MEDIDAS PARA LOGÍSTICA:
-        - Define Largo, Ancho, Alto (cm) y Peso (kg) del empaque REFORZADO para el repuesto CORRECTO (el que tú sugieres o el validado).
-
-        RESPONDE ÚNICAMENTE CON ESTE FORMATO:
-        VERDICTO: [Tu análisis técnico, sugerencias de números correctos y advertencias]
+        DEBES RESPONDER SIGUIENDO ESTE FORMATO EXACTO (SIN TEXTO EXTRA AL FINAL):
+        VERDICTO: [Tu análisis técnico y sugerencias aquí]
         DATOS_FISICOS: [Largo]x[Ancho]x[Alto]cm | [Peso]kg
         """
 
-        with st.spinner('El Perito está consultando catálogos y validando números...'):
+        with st.spinner('Auditando en catálogos...'):
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
                 res = requests.post(url, json={"contents": [{"parts": [{"text": prompt_tecnico}]}]}, timeout=20)
                 if res.status_code == 200:
                     st.session_state.raw_tecnico = res.json()['candidates'][0]['content']['parts'][0]['text']
-                else: st.error("Error en el Asesor Técnico.")
-            except: st.error("Sin conexión al motor de inteligencia.")
+                else: st.error("Error en el API.")
+            except: st.error("Error de conexión.")
     else:
         st.warning("⚠️ Complete todos los campos.")
 
-# 6. CEREBRO MATEMÁTICO: LÓGICA DE CÁLCULO BLINDADA (PYTHON)
+# 6. CEREBRO MATEMÁTICO (EXTRACCIÓN FLEXIBLE)
 if 'raw_tecnico' in st.session_state and st.session_state.raw_tecnico:
     import re
     raw = st.session_state.raw_tecnico
     
-    # 1. Extracción de datos (Limpieza de seguridad)
     try:
-        veredicto = re.search(r"VERDICTO: (.*)", raw).group(1)
-        dims = re.findall(r"(\d+)", re.search(r"MEDIDAS_CM: (.*)", raw).group(1))
-        L, An, Al = float(dims[0]), float(dims[1]), float(dims[2])
-        P_real_kg = float(re.search(r"PESO_KG: ([\d.]+)", raw).group(1))
-    except:
-        st.error("El Asesor Técnico no entregó medidas claras. Reintente.")
-        st.stop()
+        # Buscamos el veredicto
+        veredicto_match = re.search(r"VERDICTO:\s*(.*)", raw, re.IGNORECASE)
+        veredicto = veredicto_match.group(1) if veredicto_match else "Análisis disponible."
+        
+        # Buscamos la línea de datos físicos y extraemos todos los números encontrados en ella
+        datos_linea = re.search(r"DATOS_FISICOS:\s*(.*)", raw, re.IGNORECASE).group(1)
+        numeros = re.findall(r"[\d.]+", datos_linea)
+        
+        # Asignamos: Largo, Ancho, Alto, Peso
+        L = float(numeros[0])
+        An = float(numeros[1])
+        Al = float(numeros[2])
+        P_fisico = float(numeros[3])
+        
+        # --- Lógica de cálculo (La misma que ya perfeccionamos) ---
+        vol_cm3 = L * An * Al
+        if o_in == "Miami" and t_in == "Marítimo":
+            facturable = vol_cm3 / 28316.8
+            tarifa_v = st.session_state.tarifas['mia_m']
+            u = "ft³"
+        elif o_in == "Miami" and t_in == "Aéreo":
+            p_vol = vol_cm3 / 5000
+            facturable = max(P_fisico, p_vol) * 2.20462
+            tarifa_v = st.session_state.tarifas['mia_a']
+            u = "lb"
+        else: # Madrid
+            p_vol = vol_cm3 / 5000
+            facturable = max(P_fisico, p_vol)
+            tarifa_v = st.session_state.tarifas['mad']
+            u = "kg"
 
-    # 2. Lógica de cálculo (Selección de Ruta)
-    vol_cm3 = L * An * Al
-    
-    if o_in == "Miami" and t_in == "Marítimo":
-        # MARÍTIMO: Pies Cúbicos (Fórmula: cm3 / 28316.8)
-        facturable = vol_cm3 / 28316.8
-        u_simbolo = "ft³"
-        tarifa_v = st.session_state.tarifas['mia_m']
-        costo_bruto = facturable * tarifa_v
-        detalle_factura = f"{round(facturable, 2)} ft³"
+        costo_final = max(25.0, facturable * tarifa_v)
 
-    elif o_in == "Miami" and t_in == "Aéreo":
-        # MIAMI AÉREO: Libras (Mayor entre kg Real y kg Volumétrico)
-        p_vol_kg = vol_cm3 / 5000
-        p_mayor_kg = max(P_real_kg, p_vol_kg)
-        facturable_lb = p_mayor_kg * 2.20462
-        u_simbolo = "lb"
-        tarifa_v = st.session_state.tarifas['mia_a']
-        costo_bruto = facturable_lb * tarifa_v
-        detalle_factura = f"{round(facturable_lb, 2)} lb"
-
-    else: # MADRID VENEZUELA
-        # MADRID: Kilos (Mayor entre kg Real y kg Volumétrico)
-        p_vol_kg = vol_cm3 / 5000
-        p_mayor_kg = max(P_real_kg, p_vol_kg)
-        u_simbolo = "kg"
-        tarifa_v = st.session_state.tarifas['mad']
-        costo_bruto = p_mayor_kg * tarifa_v
-        detalle_factura = f"{round(p_mayor_kg, 2)} kg"
-
-    # 3. Aplicación de la Regla de Oro del Mínimo
-    costo_final = max(25.0, costo_bruto)
-    nota_minimo = " (Tarifa mínima aplicada)" if costo_bruto < 25.0 else ""
-
-    # --- DISEÑO DE SALIDA (Limpio y Profesional) ---
-    st.markdown("---")
-    st.subheader("📋 Cotización Final de Envío")
-    
-    res_1, res_2 = st.columns([2, 1])
-    
-    with res_1:
-        st.markdown(f"**Análisis Técnico:**\n{veredicto}")
-        st.write(f"**Configuración Logística:** {L}x{An}x{Al} cm | {P_real_kg} kg")
-        st.write(f"**Cálculo:** {detalle_factura} x ${tarifa_v}")
-    
-    with res_2:
-        st.metric("COSTO DDP", f"${costo_final:.2f}")
-        if nota_minimo:
-            st.warning(nota_minimo)
-
-    if st.button("🗑️ NUEVA COTIZACIÓN"):
-        st.session_state.raw_tecnico = ""
-        st.rerun()
+        # MOSTRAR RESULTADO
+        st.success("✅ Análisis y Cálculo Completado")
+        st.info(f"**DIAGNÓSTICO**: {veredicto}")
+        
+        c1, c2 = st.columns(2)
+        c1.write(f"**Detalle Físico:** {L}x{An}x{Al} cm | {P_fisico} kg")
+        c1.write(f"**Facturable:** {round(facturable, 2)} {u}")
+        c2.metric("TOTAL DDP", f"${round(costo_final, 2)} USD")
+        
+    except Exception as e:
+        st.error(f"⚠️ Error de lectura: La IA cambió el formato. Intente de nuevo. (Detalle: {e})")
 
 st.markdown("---")
 
