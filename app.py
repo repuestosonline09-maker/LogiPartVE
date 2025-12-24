@@ -53,67 +53,74 @@ with st.sidebar:
 st.markdown("<h1 style='text-align: center; color: #1E3A8A;'>Inteligencia Automotriz DDP</h1>", unsafe_allow_html=True)
 
 col1, col2, col3, col4, col5 = st.columns([2.5, 2, 2, 1.5, 1.5])
-with col1: v_in = st.text_input("Vehículo", key=f"v_{st.session_state.count}")
-with col2: r_in = st.text_input("Repuesto", key=f"r_{st.session_state.count}")
-with col3: n_in = st.text_input("N° Parte", key=f"n_{st.session_state.count}")
+with col1: v_in = st.text_input("Vehículo / Modelo", key=f"v_{st.session_state.count}")
+with col2: r_in = st.text_input("Nombre del Repuesto", key=f"r_{st.session_state.count}")
+with col3: n_in = st.text_input("Número de Parte", key=f"n_{st.session_state.count}")
 with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
 with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 5. MOTOR DE INTELIGENCIA (ELIMINANDO ERRORES DE CÁLCULO)
-if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN", type="primary", use_container_width=True):
+# 5. MOTOR DE INTELIGENCIA (EL EXPERTO AUTOMOTRIZ DEFINITIVO)
+if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary", use_container_width=True):
     if v_in and r_in and n_in:
         if o_in == "Madrid" and t_in == "Marítimo":
-            st.error("⚠️ Madrid solo permite envíos Aéreos.")
+            st.error("⚠️ Error: Madrid solo permite envíos Aéreos.")
             st.stop()
 
         prompt = f"""
-        ERES EL EXPERTO SENIOR EN LOGÍSTICA AUTOMOTRIZ DE LogiPartVE. 
-        Tu misión es COTIZAR DE FORMA AUTÓNOMA. No pidas datos al usuario.
+        ACTÚA COMO EL EXPERTO MÁXIMO EN AUTOPARTES Y LOGÍSTICA DDP. 
+        Tu marca es LogiPartVE. Tienes conocimiento total de catálogos OEM, números de parte, sustitutos (superseded) y terminología técnica en cualquier idioma.
 
-        PRODUCTO: {r_in} ({n_in}) para {v_in}.
-        RUTA: {o_in} -> Venezuela vía {t_in}.
-        TARIFAS DISPONIBLES (Monto por unidad): {st.session_state.tarifas}
+        DATOS A VALIDAR:
+        - Vehículo: {v_in}
+        - Repuesto escrito por usuario: {r_in}
+        - Número de Parte: {n_in}
+        - Ruta: {o_in} vía {t_in}
+        - Tarifas: {st.session_state.tarifas}
 
-        INSTRUCCIONES OBLIGATORIAS:
-        1. DETERMINA LAS MEDIDAS: Basado en tu base de datos de autopartes, establece las dimensiones (cm) y peso (kg) que tendrá este repuesto ya protegido con un EMPAQUE REFORZADO. No preguntes, ¡TÚ ERES EL EXPERTO!
-        
-        2. CÁLCULO LOGÍSTICO:
-           - Calcula Peso Volumétrico (LxAnxAl/5000).
-           - Determina el PESO FACTURABLE (El mayor entre Real y Volumétrico).
-           - Si la ruta es MIAMI AÉREO: Convierte a Libras (x 2.20462) y multiplica ÚNICAMENTE por {st.session_state.tarifas['mia_a']}.
-           - Si la ruta es MADRID AÉREO: Usa Kilos y multiplica ÚNICAMENTE por {st.session_state.tarifas['mad']}.
-           - Si es MIAMI MARÍTIMO: Calcula Pies Cúbicos (cm3/28316.8) y multiplica por {st.session_state.tarifas['mia_m']}.
+        TAREA 1: VALIDACIÓN TÉCNICA DE EXPERTO:
+        - Analiza si el N° de parte ({n_in}) corresponde realmente al repuesto y al vehículo ({v_in}).
+        - Si el número es viejo, indica el número actualizado. 
+        - Si el nombre está en otro idioma o es ambiguo, clarifica qué pieza es exactamente.
+        - ¡Sé un asesor! Dale seguridad al cliente de que está comprando la pieza correcta.
 
-        3. REGLA DEL MÍNIMO: Si el resultado es menor a $25.00, establece el COSTO TOTAL en $25.00 e indica: "⚠️ Se aplica tarifa mínima de envío ($25.00)".
+        TAREA 2: LOGÍSTICA AUTÓNOMA (NO PIDAS DATOS):
+        - Define TÚ las medidas (cm) y peso (kg) del repuesto con su EMPAQUE REFORZADO.
+        - Calcula Peso Volumétrico (LxAnxAl/5000). Usa el MAYOR entre Real y Volumétrico.
+        - MIAMI AÉREO: Multiplica Libras (kg x 2.20462) por {st.session_state.tarifas['mia_a']}.
+        - MADRID AÉREO: Multiplica Kilos por {st.session_state.tarifas['mad']}.
+        - MIAMI MARÍTIMO: Multiplica Pies Cúbicos (cm3/28316.8) por {st.session_state.tarifas['mia_m']}.
 
-        4. PROHIBICIÓN: No menciones aranceles extra, no sumes las tarifas de otras rutas. El resultado es TODO INCLUIDO PUERTA A PUERTA.
+        TAREA 3: REGLA DE ORO DEL MÍNIMO:
+        - Si el costo total calculado es MENOR a $25.00 USD, establece el total en $25.00 USD.
+        - Indica obligatoriamente: "⚠️ Se aplica tarifa mínima de envío ($25.00)".
 
-        FORMATO DE RESPUESTA:
-        - Análisis técnico breve de la pieza.
-        - Especificaciones del empaque reforzado que TÚ definiste.
-        - COSTO TOTAL DDP: $XX.XX USD.
+        RESULTADO (ESTILO PROFESIONAL Y DIRECTO):
+        - Confirmación técnica y de compatibilidad.
+        - Detalles del empaque reforzado estimado.
+        - COSTO TOTAL DDP: $XX.XX USD (Puerta a puerta, todo incluido).
         """
         
-        with st.spinner('Procesando...'):
+        with st.spinner('Validando compatibilidad técnica y calculando logística...'):
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
                 res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=20)
                 if res.status_code == 200:
                     st.session_state.resultado_ia = res.json()['candidates'][0]['content']['parts'][0]['text']
                     st.balloons()
+                else: st.error("Error en respuesta de IA.")
             except: st.error("Error de conexión.")
-    else: st.warning("⚠️ Complete los campos.")
+    else: st.warning("⚠️ Complete todos los campos.")
 
 if st.session_state.resultado_ia:
     st.info(st.session_state.resultado_ia)
-    if st.button("🗑️ NUEVA CONSULTA"):
+    if st.button("🗑️ NUEVA CONSULTA", use_container_width=True):
         st.session_state.count += 1
         st.session_state.resultado_ia = ""
         st.rerun()
 
 st.markdown("---")
 
-# 7. CALCULADORA MANUAL (REESTRUCTURADA)
+# 7. CALCULADORA MANUAL (MANTIENE LA PRECISIÓN LOGRADA)
 with st.expander("📊 CALCULADORA MANUAL"):
     mc1, mc2, mc3, mc4 = st.columns(4)
     with mc1: l_cm = st.number_input("Largo (cm)", min_value=0.0)
@@ -121,32 +128,25 @@ with st.expander("📊 CALCULADORA MANUAL"):
     with mc3: al_cm = st.number_input("Alto (cm)", min_value=0.0)
     with mc4: p_kg_in = st.number_input("Peso Real (kg)", min_value=0.0)
     
-    if st.button("🧮 CALCULAR"):
+    if st.button("🧮 CALCULAR MANUALMENTE"):
         vol_cm3 = l_cm * an_cm * al_cm
         p_vol = vol_cm3 / 5000
         p_mayor_kg = max(p_kg_in, p_vol)
         
-        # Iniciar cálculo de costo base
-        costo_calculado = 0.0
-        detalle_u = ""
-
         if o_in == "Miami" and t_in == "Marítimo":
-            pies_c = vol_cm3 / 28316.8
-            costo_calculado = pies_c * st.session_state.tarifas['mia_m']
-            detalle_u = f"{pies_c:.2f} ft³"
+            unit_val = vol_cm3 / 28316.8
+            costo = unit_val * st.session_state.tarifas['mia_m']
+            label = f"{unit_val:.2f} ft³"
         elif o_in == "Madrid":
-            costo_calculado = p_mayor_kg * st.session_state.tarifas['mad']
-            detalle_u = f"{p_mayor_kg:.2f} kg"
+            costo = p_mayor_kg * st.session_state.tarifas['mad']
+            label = f"{p_mayor_kg:.2f} kg"
         else: # Miami Aéreo
-            libras = p_mayor_kg * 2.20462
-            costo_calculado = libras * st.session_state.tarifas['mia_a']
-            detalle_u = f"{libras:.2f} lb"
+            unit_val = p_mayor_kg * 2.20462
+            costo = unit_val * st.session_state.tarifas['mia_a']
+            label = f"{unit_val:.2f} lb"
 
-        # APLICACIÓN DE REGLA DE MÍNIMO (BLOQUE FINAL)
-        if costo_calculado < 25.0:
-            total_final = 25.0
-            st.warning(f"Cálculo técnico: ${costo_calculado:.2f}. Se aplica TARIFA MÍNIMA DE $25.00")
-        else:
-            total_final = costo_calculado
+        if costo < 25.0:
+            st.warning(f"Cálculo: ${costo:.2f}. Se aplica TARIFA MÍNIMA DE $25.00")
+            costo = 25.0
             
-        st.success(f"Dato Facturable: {detalle_u} | TOTAL DDP: ${total_final:.2f}")
+        st.success(f"Dato Facturable: {label} | TOTAL DDP: ${costo:.2f}")
