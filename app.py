@@ -83,58 +83,73 @@ with col3: n_in = st.text_input("Número de Parte", key=f"n_{st.session_state.co
 with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
 with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 5. MOTOR DE INTELIGENCIA (FILTRO TÉCNICO Y CÁLCULO DE RUTA ÚNICA)
+# 5. MOTOR DE INTELIGENCIA (CÁLCULO EXACTO EN PYTHON + VALIDACIÓN IA)
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary", use_container_width=True):
     if v_in and r_in and n_in:
         if o_in == "Madrid" and t_in == "Marítimo":
             st.error("⚠️ Error: Madrid solo permite envíos Aéreos.")
             st.stop()
 
-        # Selección de tarifa (Python dicta la base única)
-        if o_in == "Miami":
-            tarifa_uso = st.session_state.tarifas['mia_a'] if t_in == "Aéreo" else st.session_state.tarifas['mia_m']
-            unidad_uso = "Libras (lb)" if t_in == "Aéreo" else "Pies Cúbicos (ft³)"
-        else:
-            tarifa_uso = st.session_state.tarifas['mad']
-            unidad_uso = "Kilogramos (kg)"
-
-        prompt = f"""
-        ERES EL PERITO AUDITOR DE LogiPartVE. 
-        TU MISIÓN: VALIDAR COMPATIBILIDAD Y CALCULAR EL ENVÍO ÚNICAMENTE PARA LA RUTA SELECCIONADA.
-
-        DATOS SELECCIONADOS (SÓLO USA ESTOS):
-        - Vehículo: {v_in} | Repuesto: {r_in} | N° de Parte: {n_in}
-        - ORIGEN: {o_in} | ENVÍO: {t_in} | TARIFA: ${tarifa_uso} por {unidad_uso}
-
-        TAREA 1: AUDITORÍA TÉCNICA (EXTREMA):
-        - Valida si {n_in} es correcto para {v_in}. Si es falso o de otro auto, repórtalo como ERROR CRÍTICO. Si es correcto, confirma brevemente.
-
-        TAREA 2: LÓGICA DE CÁLCULO (SÓLO PARA {o_in} - {t_in}):
-        - Estima medidas (cm) y peso (kg) del empaque reforzado de un {r_in}.
-        - PROHIBIDO calcular rutas no seleccionadas.
-        - Si es MIAMI MARÍTIMO: Calcula Pies Cúbicos (LxAnxAl / 28316.8) * {tarifa_uso}.
-        - Si es MIAMI AÉREO: Calcula Peso Volumétrico (LxAnxAl / 5000). Usa el mayor entre Real y Volumétrico. Convierte a Libras (kg x 2.20462) * {tarifa_uso}.
-        - Si es MADRID AÉREO: Usa el mayor entre Real y Volumétrico en Kilogramos * {tarifa_uso}.
-        - REGLA DEL MÍNIMO: Si el total es < $25.00, el costo final es $25.00 USD.
+        # Selección de tarifa base
+        tarifa_actual = st.session_state.tarifas['mia_a'] if o_in == "Miami" and t_in == "Aéreo" else \
+                        st.session_state.tarifas['mia_m'] if o_in == "Miami" and t_in == "Marítimo" else \
+                        st.session_state.tarifas['mad']
         
-        INSTRUCCIÓN DE DISEÑO:
-        - No muestres tus razonamientos intermedios.
-        - Entrega directamente el formato de salida solicitado.
+        unidad = "lb" if (o_in == "Miami" and t_in == "Aéreo") else "ft³" if t_in == "Marítimo" else "kg"
 
-        FORMATO DE SALIDA (RESUMIDO Y LIMPIO):
-        🛠️ **DIAGNÓSTICO TÉCNICO**: [Veredicto breve de compatibilidad]
-        📦 **DETALLES DE ENVÍO**: [Dimensiones, Peso y Unidad Facturable]
-        💰 **COSTO TOTAL DDP**: $[Monto] USD (Todo incluido puerta a puerta vía {o_in} {t_in})
+        # Prompt enfocado en MEDIDAS y VALIDACIÓN (No en el cálculo final)
+        prompt = f"""
+        ERES EL PERITO TÉCNICO DE LogiPartVE. 
+        
+        TAREA 1: VALIDAR {n_in} para {v_in} ({r_in}). Si es falso, indica "❌ ERROR DE COMPATIBILIDAD".
+        TAREA 2: Define medidas (L, An, Al en cm) y peso (kg) de un empaque REFORZADO para un {r_in}.
+        
+        ENTREGA TU RESPUESTA SIGUIENDO ESTE ESQUEMA EXACTO:
+        DIAGNOSTICO: [Tu veredicto técnico]
+        MEDIDAS: [L]x[An]x[Al] cm
+        PESO_KG: [Valor en kg]
         """
         
-        with st.spinner('Perito LogiPartVE auditando y calculando...'):
+        with st.spinner('Perito LogiPartVE auditando...'):
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
                 res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=20)
+                
                 if res.status_code == 200:
-                    st.session_state.resultado_ia = res.json()['candidates'][0]['content']['parts'][0]['text']
+                    respuesta = res.json()['candidates'][0]['content']['parts'][0]['text']
+                    
+                    # --- CÁLCULO MATEMÁTICO REAL EN PYTHON (NO ALUCINA) ---
+                    # Extraemos datos básicos que la IA propuso (o usamos defaults si falla)
+                    import re
+                    try:
+                        dims = re.findall(r"(\d+)", re.search(r"MEDIDAS: (.*)", respuesta).group(1))
+                        L, An, Al = float(dims[0]), float(dims[1]), float(dims[2])
+                        P_real = float(re.search(r"PESO_KG: ([\d.]+)", respuesta).group(1))
+                    except:
+                        L, An, Al, P_real = 30.0, 30.0, 30.0, 2.0 # Fallback seguridad
+                    
+                    # Lógica de cálculo según ruta
+                    volumen_cm3 = L * An * Al
+                    if o_in == "Miami" and t_in == "Marítimo":
+                        facturable = volumen_cm3 / 28316.8
+                    elif o_in == "Miami" and t_in == "Aéreo":
+                        p_vol = volumen_cm3 / 5000
+                        facturable = max(P_real, p_vol) * 2.20462
+                    else: # Madrid
+                        p_vol = volumen_cm3 / 5000
+                        facturable = max(P_real, p_vol)
+
+                    costo_final = max(25.0, facturable * tarifa_actual)
+                    
+                    # Formatear el resultado final para mostrar al usuario
+                    st.session_state.resultado_ia = f"""
+                    🛠️ **DIAGNÓSTICO TÉCNICO**: {re.search(r"DIAGNOSTICO: (.*)", respuesta).group(1)}
+                    📦 **DETALLES DE ENVÍO**: {L}x{An}x{Al} cm | Facturable: {round(facturable, 2)} {unidad}
+                    💰 **COSTO TOTAL DDP**: ${round(costo_final, 2)} USD (Todo incluido vía {o_in} {t_in})
+                    """
                     st.balloons()
-            except: st.error("Error de conexión.")
+            except Exception as e:
+                st.error(f"Error en motor de cálculo: {e}")
     else:
         st.warning("⚠️ Complete todos los campos.")
 
