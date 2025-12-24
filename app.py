@@ -151,9 +151,36 @@ if 'raw_tecnico' in st.session_state and st.session_state.raw_tecnico:
 
         costo_final = max(25.0, facturable * tarifa_v)
 
-        # MOSTRAR RESULTADO
-        st.success("✅ Análisis y Cálculo Completado")
-        st.info(f"**DIAGNÓSTICO**: {veredicto}")
+        # --- DISEÑO DE SALIDA PROFESIONAL ---
+        st.markdown("---")
+        
+        # Título con icono de seguridad
+        st.markdown("### 🔍 INFORME DE AUDITORÍA Y COTIZACIÓN")
+
+        # RECUADRO DE RESALTE PARA EL ASESOR (Cerebro 1)
+        with st.container(border=True):
+            st.markdown("##### 🛠️ Diagnóstico del Asesor Técnico")
+            st.info(veredicto) # El texto del asesor aparece en un recuadro azul profesional
+
+        # BLOQUE DE COSTOS Y LOGÍSTICA (Cerebro 2)
+        c1, c2 = st.columns([1.5, 1])
+        
+        with c1:
+            st.markdown("##### 📦 Configuración Logística")
+            st.write(f"**Empaque:** {L} x {An} x {Al} cm")
+            st.write(f"**Peso Físico:** {P_fisico} kg")
+            st.write(f"**Cálculo:** {round(facturable, 2)} {u} x ${tarifa_v}")
+        
+        with c2:
+            st.markdown("##### 💰 Inversión DDP")
+            st.metric(label="TOTAL A PAGAR", value=f"${round(costo_final, 2)} USD")
+            if costo_bruto < 25.0:
+                st.caption("⚠️ Incluye tarifa mínima de gestión")
+
+        st.markdown(f"*(Operación puerta a puerta vía {o_in} {t_in} sin cargos ocultos)*")
+
+    except Exception as e:
+        st.error(f"⚠️ Error de lectura: El Asesor Técnico entregó un formato inesperado. (Detalle: {e})")
         
         c1, c2 = st.columns(2)
         c1.write(f"**Detalle Físico:** {L}x{An}x{Al} cm | {P_fisico} kg")
