@@ -83,14 +83,14 @@ with col3: n_in = st.text_input("Número de Parte", key=f"n_{st.session_state.co
 with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
 with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 5. MOTOR DE INTELIGENCIA (MODO INSPECTOR RIGUROSO + DDP BLINDADO)
+# 5. MOTOR DE INTELIGENCIA (MODO PERITO TÉCNICO + RADAR GEOPOLÍTICO)
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary", use_container_width=True):
     if v_in and r_in and n_in:
         if o_in == "Madrid" and t_in == "Marítimo":
             st.error("⚠️ Error: Madrid solo permite envíos Aéreos.")
             st.stop()
 
-        # BLOQUE DE CÁLCULO PREVIO (Python dicta el precio, no la IA)
+        # Lógica de cálculo blindada (Python tiene el control del precio)
         if o_in == "Miami":
             tarifa_uso = st.session_state.tarifas['mia_a'] if t_in == "Aéreo" else st.session_state.tarifas['mia_m']
             unidad_uso = "Libras (lb)" if t_in == "Aéreo" else "Pies Cúbicos (ft³)"
@@ -98,40 +98,45 @@ if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary",
             tarifa_uso = st.session_state.tarifas['mad']
             unidad_uso = "Kilogramos (kg)"
 
+        # PROMPT CON "MODO PERITO": Prioriza la verdad técnica sobre la cortesía
         prompt = f"""
-        ERES UN INSPECTOR TÉCNICO Y LOGÍSTICO DE LogiPartVE. 
-        TU PRIORIDAD ES LA VERDAD TÉCNICA Y LA PRECISIÓN MATEMÁTICA.
+        ERES UN PERITO TÉCNICO AUTOMOTRIZ Y EXPERTO LOGÍSTICO DDP.
+        TU MARCA ES LogiPartVE. TU MISIÓN ES EVITAR QUE EL CLIENTE COMPRE LA PIEZA EQUIVOCADA.
 
-        DATOS BASE: {r_in} | {n_in} | {v_in}. 
-        RUTA: {o_in} ({t_in}). 
-        TARIFA ÚNICA: {tarifa_uso} por {unidad_uso}. (ESTE PRECIO YA INCLUYE IMPUESTOS Y ARANCELES DDP).
+        DATOS A EVALUAR:
+        - Vehículo: {v_in}
+        - Repuesto: {r_in}
+        - N° de Parte: {n_in}
+        - Ruta: {o_in} ({t_in}) | Tarifa: {tarifa_uso} por {unidad_uso}
 
-        TAREA 1: INSPECCIÓN OEM (PROHIBIDO ALUCINAR):
-        - Verifica el N° {n_in} para {v_in}. Si el número no existe o es inventado, DEBES reportarlo como "ERROR TÉCNICO" y dar el número correcto. No aceptes números falsos.
+        TAREA 1: AUDITORÍA TÉCNICA AGRESIVA (PROHIBIDO ALUCINAR):
+        - No asumas que el N° de parte es correcto. Investiga: ¿Ese número {n_in} realmente pertenece a un {v_in}?
+        - Si el número pertenece a otro auto (ej. Aveo en lugar de Impala), DEBES ser tajante: "⚠️ ERROR DE COMPATIBILIDAD: El N° de parte {n_in} es para un Chevrolet Aveo y NO funcionará en su {v_in}."
+        - Explica brevemente POR QUÉ no sirve (presión, flujo, diseño).
+        - Indica el número OEM correcto (ej. AC Delco MU1613) para el vehículo solicitado.
 
-        TAREA 2: CÁLCULO LOGÍSTICO BLINDADO (NO SUMAR CARGOS EXTRAS):
-        - Define Largo, Ancho, Alto (cm) y Peso (kg) del empaque reforzado.
-        - Calcula Peso Volumétrico (LxAnxAl/5000). Usa el MAYOR entre Real y Volumétrico.
-        - Si es Miami Aéreo: Convierte el mayor a lb (x 2.20462) y multiplica por {tarifa_uso}.
-        - Si es Madrid Aéreo: Usa kilos y multiplica por {tarifa_uso}.
-        - Si es Miami Marítimo: Usa ft³ (cm3/28316.8) y multiplica por {tarifa_uso}.
-        - REGLA DEL MÍNIMO: Si el total es < $25, el costo es $25.00.
-        - PROHIBICIÓN: NO SUMES SEGUROS, MANEJOS O ADUANAS EXTRAS. La tarifa {tarifa_uso} ya lo tiene todo.
+        TAREA 2: CÁLCULO LOGÍSTICO (USAR LA PIEZA CORRECTA):
+        - Basado en el tamaño de la PIEZA CORRECTA (no la errónea), define medidas y peso.
+        - Peso Volumétrico (LxAnxAl/5000). Usa el MAYOR entre Real y Volumétrico.
+        - Miami Aéreo: lb (kg x 2.20462) * {tarifa_uso}.
+        - Madrid Aéreo: kg * {tarifa_uso}.
+        - Miami Marítimo: ft³ (cm3/28316.8) * {tarifa_uso}.
+        - Mínimo obligatorio: $25.00 USD.
 
-        TAREA 3: RADAR DE NOTICIAS (DICIEMBRE 2025):
-        - Busca noticias reales sobre bloqueos navales en el Caribe, situación de vuelos o cambios en la aduana de Venezuela HOY.
+        TAREA 3: RADAR GEOPOLÍTICO (24 DICIEMBRE 2025):
+        - Reporta noticias reales: Bloqueos navales en el Caribe, tensiones en la región o retrasos por huelgas/clima hoy mismo.
 
-        FORMATO DE RESPUESTA:
-        🛠️ **DIAGNÓSTICO TÉCNICO**: [Resumen de compatibilidad]
-        📦 **DETALLES DE ENVÍO**: [Empaque y peso facturable]
-        💰 **COSTO TOTAL DDP**: [Solo el monto final calculado] USD
-        📡 **RADAR LOGÍSTICO Y GEOPOLÍTICO**:
-           • ⚠️ [Restricción del producto]
-           • 🌍 [Noticias de impacto real en la ruta]
+        FORMATO DE SALIDA:
+        🛠️ **DIAGNÓSTICO TÉCNICO**: [Veredicto real del perito]
+        📦 **DETALLES DE ENVÍO**: [Datos del empaque de la pieza CORRECTA]
+        💰 **COSTO TOTAL DDP**: $[Monto] USD
+        📡 **RADAR LOGÍSTICO**:
+           • [Noticia o restricción]
         """
         
-        with st.spinner('Validando pieza con catálogos OEM y analizando rutas...'):
+        with st.spinner('Perito LogiPartVE verificando compatibilidad...'):
             try:
+                # Usamos el modelo con búsqueda para mayor precisión
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
                 res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=20)
                 if res.status_code == 200:
