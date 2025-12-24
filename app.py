@@ -83,14 +83,14 @@ with col3: n_in = st.text_input("Número de Parte", key=f"n_{st.session_state.co
 with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
 with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 5. MOTOR DE INTELIGENCIA (RESTAURACIÓN DE RIGOR TÉCNICO Y CÁLCULO)
+# 5. MOTOR DE INTELIGENCIA (FILTRO TÉCNICO Y CÁLCULO DE RUTA ÚNICA)
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary", use_container_width=True):
     if v_in and r_in and n_in:
         if o_in == "Madrid" and t_in == "Marítimo":
             st.error("⚠️ Error: Madrid solo permite envíos Aéreos.")
             st.stop()
 
-        # Selección de tarifa (Python dicta la base para evitar alucinaciones)
+        # Selección de tarifa (Python dicta la base única)
         if o_in == "Miami":
             tarifa_uso = st.session_state.tarifas['mia_a'] if t_in == "Aéreo" else st.session_state.tarifas['mia_m']
             unidad_uso = "Libras (lb)" if t_in == "Aéreo" else "Pies Cúbicos (ft³)"
@@ -99,28 +99,35 @@ if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary",
             unidad_uso = "Kilogramos (kg)"
 
         prompt = f"""
-        ERES UN PERITO TÉCNICO AUTOMOTRIZ DE LogiPartVE. TU MISIÓN ES LA PRECISIÓN ABSOLUTA.
+        ERES EL PERITO AUDITOR DE LogiPartVE. 
+        TU MISIÓN: VALIDAR COMPATIBILIDAD Y CALCULAR EL ENVÍO ÚNICAMENTE PARA LA RUTA SELECCIONADA.
 
-        TAREA 1: AUDITORÍA TÉCNICA (MODO ESTRICTO):
-        - Valida el {r_in} para {v_in} con N° de Parte {n_in}.
-        - Si el número es inventado, incorrecto o de otro vehículo, detén el proceso y reporta: "❌ ERROR DE COMPATIBILIDAD". No seas complaciente.
-        - Si es correcto, confirma con detalles técnicos de la pieza.
+        DATOS SELECCIONADOS (SÓLO USA ESTOS):
+        - Vehículo: {v_in} | Repuesto: {r_in} | N° de Parte: {n_in}
+        - ORIGEN: {o_in} | ENVÍO: {t_in} | TARIFA: ${tarifa_uso} por {unidad_uso}
 
-        TAREA 2: LÓGICA DE CÁLCULO LOGÍSTICO (SIN ERRORES):
-        - Determina Largo, Ancho, Alto (cm) y Peso (kg) del empaque reforzado.
-        - REGLA MIAMI MARÍTIMO: Calcula Pies Cúbicos (LxAnxAl / 28316.8). Multiplica por {tarifa_uso}.
-        - REGLA MIAMI AÉREO: Calcula Peso Volumétrico (LxAnxAl / 5000). Usa el mayor entre Real y Volumétrico. Convierte a Libras (kg x 2.20462). Multiplica por {tarifa_uso}.
-        - REGLA MADRID: Usa el mayor entre Real y Volumétrico en Kilogramos. Multiplica por {tarifa_uso}.
-        - REGLA DEL MÍNIMO: Si el total es < $25, el resultado final es $25.00 USD.
-        - PROHIBIDO: No sumes seguros, impuestos o aduanas. La tarifa de {tarifa_uso} ya es DDP (Todo incluido).
+        TAREA 1: AUDITORÍA TÉCNICA (EXTREMA):
+        - Valida si {n_in} es correcto para {v_in}. Si es falso o de otro auto, repórtalo como ERROR CRÍTICO. Si es correcto, confirma brevemente.
 
-        FORMATO DE SALIDA:
-        🛠️ **DIAGNÓSTICO TÉCNICO**: [Veredicto detallado]
-        📦 **DETALLES DE ENVÍO**: [Dimensiones y Peso/Volumen facturable]
-        💰 **COSTO TOTAL DDP**: $[Monto] USD (Todo incluido puerta a puerta)
+        TAREA 2: LÓGICA DE CÁLCULO (SÓLO PARA {o_in} - {t_in}):
+        - Estima medidas (cm) y peso (kg) del empaque reforzado de un {r_in}.
+        - PROHIBIDO calcular rutas no seleccionadas.
+        - Si es MIAMI MARÍTIMO: Calcula Pies Cúbicos (LxAnxAl / 28316.8) * {tarifa_uso}.
+        - Si es MIAMI AÉREO: Calcula Peso Volumétrico (LxAnxAl / 5000). Usa el mayor entre Real y Volumétrico. Convierte a Libras (kg x 2.20462) * {tarifa_uso}.
+        - Si es MADRID AÉREO: Usa el mayor entre Real y Volumétrico en Kilogramos * {tarifa_uso}.
+        - REGLA DEL MÍNIMO: Si el total es < $25.00, el costo final es $25.00 USD.
+        
+        INSTRUCCIÓN DE DISEÑO:
+        - No muestres tus razonamientos intermedios.
+        - Entrega directamente el formato de salida solicitado.
+
+        FORMATO DE SALIDA (RESUMIDO Y LIMPIO):
+        🛠️ **DIAGNÓSTICO TÉCNICO**: [Veredicto breve de compatibilidad]
+        📦 **DETALLES DE ENVÍO**: [Dimensiones, Peso y Unidad Facturable]
+        💰 **COSTO TOTAL DDP**: $[Monto] USD (Todo incluido puerta a puerta vía {o_in} {t_in})
         """
         
-        with st.spinner('Auditando compatibilidad y calculando logística...'):
+        with st.spinner('Perito LogiPartVE auditando y calculando...'):
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
                 res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=20)
