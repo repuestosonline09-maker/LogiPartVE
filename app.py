@@ -83,49 +83,44 @@ with col3: n_in = st.text_input("Número de Parte", key=f"n_{st.session_state.co
 with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
 with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 5. MOTOR DE INTELIGENCIA (RESTAURACIÓN DE RIGOR TÉCNICO + RADAR)
+# 5. MOTOR DE INTELIGENCIA (RESTAURACIÓN DE RIGOR TÉCNICO Y CÁLCULO)
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary", use_container_width=True):
     if v_in and r_in and n_in:
         if o_in == "Madrid" and t_in == "Marítimo":
             st.error("⚠️ Error: Madrid solo permite envíos Aéreos.")
             st.stop()
 
-        # Selección de tarifa (Python controla la matemática)
+        # Selección de tarifa (Python dicta la base para evitar alucinaciones)
         if o_in == "Miami":
             tarifa_uso = st.session_state.tarifas['mia_a'] if t_in == "Aéreo" else st.session_state.tarifas['mia_m']
-            unidad_uso = "lb" if t_in == "Aéreo" else "ft³"
+            unidad_uso = "Libras (lb)" if t_in == "Aéreo" else "Pies Cúbicos (ft³)"
         else:
             tarifa_uso = st.session_state.tarifas['mad']
-            unidad_uso = "kg"
+            unidad_uso = "Kilogramos (kg)"
 
         prompt = f"""
-        ERES UN PERITO TÉCNICO AUTOMOTRIZ DE LogiPartVE. TU MISIÓN ES LA AUDITORÍA TOTAL.
-        
-        TAREA 1: AUDITORÍA TÉCNICA (CERO TOLERANCIA):
-        - Evalúa: {r_in} para {v_in} con N° de Parte {n_in}.
-        - Si el número {n_in} es inventado, muy largo, o no existe en catálogos de Mopar, AC Delco, Motorcraft o marcas OEM, reporta: "❌ ERROR: NÚMERO DE PARTE INVÁLIDO".
-        - Si el número es de otra pieza (ej: pusiste radiador y el número es de bomba), denúncialo.
-        - SÓLO si el número es real y correcto, procede con "✅ COMPATIBILIDAD VERIFICADA".
+        ERES UN PERITO TÉCNICO AUTOMOTRIZ DE LogiPartVE. TU MISIÓN ES LA PRECISIÓN ABSOLUTA.
 
-        TAREA 2: LOGÍSTICA Y COSTO DDP:
-        - Calcula medidas y peso de un {r_in} real.
-        - Usa el peso mayor entre Real y Volumétrico (LxAnxAl/5000).
-        - Aplica tarifa {tarifa_uso} x Medida Facturable. Mínimo obligatorio $25.00 USD.
-        - No inventes cargos de seguro o aduana extras. La tarifa ya es DDP.
+        TAREA 1: AUDITORÍA TÉCNICA (MODO ESTRICTO):
+        - Valida el {r_in} para {v_in} con N° de Parte {n_in}.
+        - Si el número es inventado, incorrecto o de otro vehículo, detén el proceso y reporta: "❌ ERROR DE COMPATIBILIDAD". No seas complaciente.
+        - Si es correcto, confirma con detalles técnicos de la pieza.
 
-        TAREA 3: RADAR LOGÍSTICO (RESUMIDO):
-        - HOY ES 24 DE DICIEMBRE DE 2025.
-        - Informa exclusivamente noticias de alto impacto: Bloqueos navales reales en el Caribe, huelgas de transporte o retrasos críticos por temporada.
+        TAREA 2: LÓGICA DE CÁLCULO LOGÍSTICO (SIN ERRORES):
+        - Determina Largo, Ancho, Alto (cm) y Peso (kg) del empaque reforzado.
+        - REGLA MIAMI MARÍTIMO: Calcula Pies Cúbicos (LxAnxAl / 28316.8). Multiplica por {tarifa_uso}.
+        - REGLA MIAMI AÉREO: Calcula Peso Volumétrico (LxAnxAl / 5000). Usa el mayor entre Real y Volumétrico. Convierte a Libras (kg x 2.20462). Multiplica por {tarifa_uso}.
+        - REGLA MADRID: Usa el mayor entre Real y Volumétrico en Kilogramos. Multiplica por {tarifa_uso}.
+        - REGLA DEL MÍNIMO: Si el total es < $25, el resultado final es $25.00 USD.
+        - PROHIBIDO: No sumes seguros, impuestos o aduanas. La tarifa de {tarifa_uso} ya es DDP (Todo incluido).
 
         FORMATO DE SALIDA:
-        🛠️ **DIAGNÓSTICO TÉCNICO**: [Veredicto]
-        📦 **DETALLES DE ENVÍO**: [Datos del empaque y peso]
-        💰 **COSTO TOTAL DDP**: $[Monto] USD
-        📡 **RADAR LOGÍSTICO (24/12/2025)**:
-           • [Noticia Real]
+        🛠️ **DIAGNÓSTICO TÉCNICO**: [Veredicto detallado]
+        📦 **DETALLES DE ENVÍO**: [Dimensiones y Peso/Volumen facturable]
+        💰 **COSTO TOTAL DDP**: $[Monto] USD (Todo incluido puerta a puerta)
         """
         
-        with st.spinner('Perito LogiPartVE auditando información...'):
+        with st.spinner('Auditando compatibilidad y calculando logística...'):
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
                 res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=20)
