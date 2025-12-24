@@ -67,19 +67,31 @@ if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN", type="primary", use_contain
             st.stop()
 
         prompt = f"""
-        ACTÚA COMO EXPERTO LOGÍSTICO DDP PARA LogiPartVE.
-        DATOS: {r_in} ({n_in}) para {v_in}. Ruta: {o_in} vía {t_in}. Tarifas: {st.session_state.tarifas}
+        ERES EL EXPERTO SENIOR EN LOGÍSTICA AUTOMOTRIZ DE LogiPartVE. 
+        Tu misión es COTIZAR DE FORMA AUTÓNOMA. No pidas datos al usuario.
 
-        REGLAS DE ORO INNEGOCIABLES:
-        1. PESO FACTURABLE: Calcula Volumétrico (LxAnxAl/5000). Compara con peso real. USA EL MAYOR.
-        2. UNIDADES: Miami Aéreo = LIBRAS (kg x 2.20462). Madrid = KILOS. Miami Marítimo = PIES CÚBICOS (cm3 / 28316.8).
-        3. TARIFA MÍNIMA: Si el costo total es menor a $25.00 USD, DEBES cobrar obligatoriamente $25.00 USD.
-        4. MENSAJE DE MÍNIMO: Si aplicas el mínimo, escribe: "⚠️ Se aplica tarifa mínima de envío ($25.00)".
+        PRODUCTO: {r_in} ({n_in}) para {v_in}.
+        RUTA: {o_in} -> Venezuela vía {t_in}.
+        TARIFAS DISPONIBLES (Monto por unidad): {st.session_state.tarifas}
 
-        ESTRUCTURA DE RESPUESTA:
-        - Validación técnica.
-        - Detalle de empaque y pesos (Real vs Volumétrico).
-        - COSTO TOTAL DDP: $XX.XX (Incluye todo).
+        INSTRUCCIONES OBLIGATORIAS:
+        1. DETERMINA LAS MEDIDAS: Basado en tu base de datos de autopartes, establece las dimensiones (cm) y peso (kg) que tendrá este repuesto ya protegido con un EMPAQUE REFORZADO. No preguntes, ¡TÚ ERES EL EXPERTO!
+        
+        2. CÁLCULO LOGÍSTICO:
+           - Calcula Peso Volumétrico (LxAnxAl/5000).
+           - Determina el PESO FACTURABLE (El mayor entre Real y Volumétrico).
+           - Si la ruta es MIAMI AÉREO: Convierte a Libras (x 2.20462) y multiplica ÚNICAMENTE por {st.session_state.tarifas['mia_a']}.
+           - Si la ruta es MADRID AÉREO: Usa Kilos y multiplica ÚNICAMENTE por {st.session_state.tarifas['mad']}.
+           - Si es MIAMI MARÍTIMO: Calcula Pies Cúbicos (cm3/28316.8) y multiplica por {st.session_state.tarifas['mia_m']}.
+
+        3. REGLA DEL MÍNIMO: Si el resultado es menor a $25.00, establece el COSTO TOTAL en $25.00 e indica: "⚠️ Se aplica tarifa mínima de envío ($25.00)".
+
+        4. PROHIBICIÓN: No menciones aranceles extra, no sumes las tarifas de otras rutas. El resultado es TODO INCLUIDO PUERTA A PUERTA.
+
+        FORMATO DE RESPUESTA:
+        - Análisis técnico breve de la pieza.
+        - Especificaciones del empaque reforzado que TÚ definiste.
+        - COSTO TOTAL DDP: $XX.XX USD.
         """
         
         with st.spinner('Procesando...'):
