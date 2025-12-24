@@ -143,25 +143,46 @@ if st.session_state.resultado_ia:
 
 st.markdown("---")
 
-# 7. CALCULADORA MANUAL (CONVERSIÓN DE UNIDADES INCLUIDA)
+# 7. CALCULADORA MANUAL (AÉREO VS MARÍTIMO + MÍNIMO $25)
 with st.expander("📊 CALCULADORA MANUAL"):
+    st.write("Cálculo automático de Peso Volumétrico / Pies Cúbicos y Tarifa Mínima.")
     mc1, mc2, mc3, mc4 = st.columns(4)
     with mc1: l_cm = st.number_input("Largo (cm)", min_value=0.0, format="%.1f")
     with mc2: an_cm = st.number_input("Ancho (cm)", min_value=0.0, format="%.1f")
     with mc3: al_cm = st.number_input("Alto (cm)", min_value=0.0, format="%.1f")
-    with mc4: p_kg = st.number_input("Peso (kg)", min_value=0.0, format="%.1f")
+    with mc4: p_kg = st.number_input("Peso Real (kg)", min_value=0.0, format="%.1f")
     
     if st.button("🧮 CALCULAR MANUALMENTE"):
-        p_v = (l_cm * an_cm * al_cm) / 5000
-        p_final_kg = max(p_kg, p_v)
+        # Cálculos Base
+        vol_cm3 = l_cm * an_cm * al_cm
+        p_vol = vol_cm3 / 5000
+        p_mayor_kg = max(p_kg, p_vol)
         
-        if o_in == "Madrid":
-            p_facturable = p_final_kg
-            unidad = "kg"
-            tarifa = st.session_state.tarifas['mad']
-        else:
-            p_facturable = p_final_kg * 2.20462  # Conversión a Libras para Miami
-            unidad = "lb"
-            tarifa = st.session_state.tarifas['mia_a']
+        if o_in == "Miami" and t_in == "Marítimo":
+            # REGLA MARÍTIMA: Pies Cúbicos (1 ft3 = 28316.8 cm3)
+            ft3 = vol_cm3 / 28316.8
+            total_previo = ft3 * st.session_state.tarifas['mia_m']
+            p_display, unit = ft3, "ft³"
+            tarifa_val = st.session_state.tarifas['mia_m']
+        
+        elif o_in == "Madrid":
+            # REGLA MADRID: Kilos
+            total_previo = p_mayor_kg * st.session_state.tarifas['mad']
+            p_display, unit = p_mayor_kg, "kg"
+            tarifa_val = st.session_state.tarifas['mad']
             
-        st.success(f"Peso facturable: {p_facturable:.2f} {unidad} | Total DDP: ${p_facturable * tarifa:.2f}")
+        else: # Miami Aéreo
+            # REGLA MIAMI AÉREO: Libras
+            p_lb = p_mayor_kg * 2.20462
+            total_previo = p_lb * st.session_state.tarifas['mia_a']
+            p_display, unit = p_lb, "lb"
+            tarifa_val = st.session_state.tarifas['mia_a']
+
+        # Aplicación del Mínimo de $25 (Aplica a todas las rutas)
+        if total_previo < 25:
+            st.warning(f"El cálculo arroja ${total_previo:.2f}, pero se aplica la Tarifa Mínima de $25.00.")
+            total_final = 25.0
+        else:
+            total_final = total_previo
+            
+        st.success(f"Dato Facturable: {p_display:.2f} {unit} | Tarifa: ${tarifa_val} | TOTAL DDP: ${total_final:.2f}")
