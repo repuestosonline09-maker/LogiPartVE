@@ -83,57 +83,66 @@ with col3: n_in = st.text_input("Número de Parte", key=f"n_{st.session_state.co
 with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
 with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 5. MOTOR DE INTELIGENCIA (FILTRO DE SEGURIDAD + RADAR 24-DIC-2025)
+# 5. MOTOR DE INTELIGENCIA (VERIFICACIÓN OEM REAL + RADAR GEOPOLÍTICO)
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary", use_container_width=True):
     if v_in and r_in and n_in:
         if o_in == "Madrid" and t_in == "Marítimo":
             st.error("⚠️ Error: Madrid solo permite envíos Aéreos.")
             st.stop()
 
-        # Selección de tarifa previa (Python dicta la base)
+        # Lógica de cálculo estricta en Python
         if o_in == "Miami":
             tarifa_uso = st.session_state.tarifas['mia_a'] if t_in == "Aéreo" else st.session_state.tarifas['mia_m']
-            unidad_uso = "Libras (lb)" if t_in == "Aéreo" else "Pies Cúbicos (ft³)"
+            unidad_uso = "lb" if t_in == "Aéreo" else "ft³"
         else:
             tarifa_uso = st.session_state.tarifas['mad']
-            unidad_uso = "Kilogramos (kg)"
+            unidad_uso = "kg"
 
-        # PROMPT DE "CORTE POR ERROR"
         prompt = f"""
-        ESTRICTO: ERES UN PERITO TÉCNICO DE LogiPartVE. 
-        HOY ES MIÉRCOLES 24 DE DICIEMBRE DE 2025.
+        SISTEMA DE VERIFICACIÓN LOGIPARTVE - FECHA: 24/12/2025
+        
+        OBJETIVO: Validar compatibilidad real y calcular envío DDP.
+        
+        DATOS SUMINISTRADOS:
+        - Repuesto: {r_in}
+        - Vehículo: {v_in}
+        - N° de Parte: {n_in}
+        - Ruta: {o_in} ({t_in}) | Tarifa: {tarifa_uso} x {unidad_uso}
 
-        INSTRUCCIÓN DE PRIORIDAD 1 (VALIDACIÓN):
-        - Analiza si el N° de parte {n_in} es para un {v_in}. 
-        - Si NO ES COMPATIBLE (ej: es de Aveo y el auto es Impala), INICIA tu respuesta con el título "❌ ERROR CRÍTICO DE COMPATIBILIDAD". 
-        - Explica brevemente el riesgo técnico y da el N° OEM correcto.
-        - **DETENTE AQUÍ**. No realices cálculos detallados si la pieza es incorrecta, solo da un estimado logístico basado en la pieza correcta.
+        TAREA 1: BÚSQUEDA Y VALIDACIÓN (USA TU BASE DE DATOS Y BÚSQUEDA):
+        1. Busca el N° de parte {n_in}. 
+        2. Si el número coincide EXACTAMENTE con el {r_in} para el {v_in} (como el caso del Fan Clutch de Jeep), confirma la validez con entusiasmo profesional.
+        3. Solo si hay una discrepancia técnica total e indiscutible, reporta un error. No inventes errores.
 
-        INSTRUCCIÓN DE PRIORIDAD 2 (LOGÍSTICA SI TODO ES CORRECTO):
-        - Calcula Largo, Ancho, Alto (cm) y Peso (kg) del empaque REFORZADO.
-        - Peso Volumétrico (LxAnxAl/5000). Usa el MAYOR entre Real y Volumétrico.
-        - Miami Aéreo: lb (kg x 2.20462). Miami Marítimo: ft³ (cm3/28316.8). Madrid: kg.
-        - Costo Total = Medida Facturable * {tarifa_uso}. Mínimo $25.00 USD.
-        - PROHIBIDO sumar cargos extras (Seguros/Aduanas). La tarifa {tarifa_uso} ya es DDP.
+        TAREA 2: CÁLCULO LOGÍSTICO (RESUMIDO):
+        - Estima dimensiones y peso real de un {r_in} de este tipo.
+        - Calcula el peso volumétrico (LxAnxAl/5000).
+        - Calcula el Costo Total DDP (Tarifa {tarifa_uso} x Medida Facturable). 
+        - Si el total es menor a $25.00, el resultado es $25.00 USD.
+        - IMPORTANTE: No desgloses cargos extras. El precio debe ser ÚNICO y FINAL.
 
-        INSTRUCCIÓN DE PRIORIDAD 3 (RADAR GEOPOLÍTICO 2025):
-        - Investiga noticias de hoy 24 de Diciembre: Bloqueos navales en el Caribe, estatus de puertos en Venezuela y retrasos por temporada navideña.
+        TAREA 3: RADAR GEOPOLÍTICO Y NOTICIAS (SITUACIÓN CARIBE/VENEZUELA):
+        - Investiga y reporta noticias REALES de HOY 24 de diciembre de 2025.
+        - Incluye alertas sobre: Presencia militar en el Caribe, restricciones de vuelos actuales, bloqueos navales o saturación de puertos por temporada navideña.
 
-        FORMATO DE SALIDA (RESUMIDO):
-        🛠️ **VERDICTO TÉCNICO**: [Si es error, resáltalo en rojo]
-        💰 **COTIZACIÓN DDP**: $[Monto] USD (Basado en la pieza correcta)
+        FORMATO DE RESPUESTA (ESTRICTO):
+        🛠️ **DIAGNÓSTICO TÉCNICO**: [Veredicto de compatibilidad basado en datos reales]
+        📦 **DETALLES DE ENVÍO**: [Dimensiones y Peso Facturable]
+        💰 **COSTO TOTAL DDP**: $[Monto] USD (Precio Final Puerta a Puerta)
         📡 **RADAR LOGÍSTICO (24/12/2025)**:
-           • [Noticia real de bloqueos/clima/aduna]
+           • ⚠️ [Alerta técnica o aduanal]
+           • 🌍 [Noticia Geopolítica o Clima Crítico de HOY]
         """
         
-        with st.spinner('Perito LogiPartVE realizando auditoría técnica...'):
+        with st.spinner('Accediendo a catálogos OEM y radares globales...'):
             try:
+                # Utilizamos el modelo Gemini 2.0 Flash que es más preciso en búsquedas
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
                 res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=20)
                 if res.status_code == 200:
                     st.session_state.resultado_ia = res.json()['candidates'][0]['content']['parts'][0]['text']
                     st.balloons()
-            except: st.error("Error de conexión.")
+            except: st.error("Error de conexión con el motor de inteligencia.")
     else:
         st.warning("⚠️ Complete todos los campos.")
 
