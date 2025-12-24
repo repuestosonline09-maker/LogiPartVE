@@ -152,33 +152,46 @@ if st.session_state.resultado_ia:
 
 st.markdown("---")
 
-# 7. CALCULADORA MANUAL (LÓGICA BLINDADA)
+# 7. CALCULADORA MANUAL (ACTUALIZADA CON BOTÓN DE LIMPIEZA)
 with st.expander("📊 CALCULADORA MANUAL"):
-    mc1, mc2, mc3, mc4 = st.columns(4)
-    with mc1: l_cm = st.number_input("Largo (cm)", min_value=0.0, format="%.1f")
-    with mc2: an_cm = st.number_input("Ancho (cm)", min_value=0.0, format="%.1f")
-    with mc3: al_cm = st.number_input("Alto (cm)", min_value=0.0, format="%.1f")
-    with mc4: p_kg_in = st.number_input("Peso Real (kg)", min_value=0.0, format="%.1f")
-    
-    if st.button("🧮 CALCULAR MANUALMENTE"):
-        vol_cm3 = l_cm * an_cm * al_cm
-        p_vol = vol_cm3 / 5000
-        p_mayor_kg = max(p_kg_in, p_vol)
-        
-        if o_in == "Miami" and t_in == "Marítimo":
-            unit_val = vol_cm3 / 28316.8
-            costo = unit_val * st.session_state.tarifas['mia_m']
-            label = f"{unit_val:.2f} ft³"
-        elif o_in == "Madrid":
-            costo = p_mayor_kg * st.session_state.tarifas['mad']
-            label = f"{p_mayor_kg:.2f} kg"
-        else: # Miami Aéreo
-            unit_val = p_mayor_kg * 2.20462
-            costo = unit_val * st.session_state.tarifas['mia_a']
-            label = f"{unit_val:.2f} lb"
+    # Inicializamos un contador para los campos manuales si no existe
+    if 'clean_manual' not in st.session_state:
+        st.session_state.clean_manual = 0
 
-        if costo < 25.0:
-            st.warning(f"Cálculo: ${costo:.2f}. Se aplica TARIFA MÍNIMA DE $25.00")
-            costo = 25.0
+    mc1, mc2, mc3, mc4 = st.columns(4)
+    # Usamos el contador en el key para permitir el reseteo
+    with mc1: l_cm = st.number_input("Largo (cm)", min_value=0.0, format="%.1f", key=f"l_{st.session_state.clean_manual}")
+    with mc2: an_cm = st.number_input("Ancho (cm)", min_value=0.0, format="%.1f", key=f"an_{st.session_state.clean_manual}")
+    with mc3: al_cm = st.number_input("Alto (cm)", min_value=0.0, format="%.1f", key=f"al_{st.session_state.clean_manual}")
+    with mc4: p_kg_in = st.number_input("Peso Real (kg)", min_value=0.0, format="%.1f", key=f"p_{st.session_state.clean_manual}")
+    
+    col_btn1, col_btn2 = st.columns(2)
+    
+    with col_btn1:
+        if st.button("🧮 CALCULAR MANUALMENTE", use_container_width=True):
+            vol_cm3 = l_cm * an_cm * al_cm
+            p_vol = vol_cm3 / 5000
+            p_mayor_kg = max(p_kg_in, p_vol)
             
-        st.success(f"Dato Facturable: {label} | TOTAL DDP: ${costo:.2f}")
+            if o_in == "Miami" and t_in == "Marítimo":
+                unit_val = vol_cm3 / 28316.8
+                costo = unit_val * st.session_state.tarifas['mia_m']
+                label = f"{unit_val:.2f} ft³"
+            elif o_in == "Madrid":
+                costo = p_mayor_kg * st.session_state.tarifas['mad']
+                label = f"{p_mayor_kg:.2f} kg"
+            else: # Miami Aéreo
+                unit_val = p_mayor_kg * 2.20462
+                costo = unit_val * st.session_state.tarifas['mia_a']
+                label = f"{unit_val:.2f} lb"
+
+            if costo < 25.0:
+                st.warning(f"Cálculo: ${costo:.2f}. Se aplica TARIFA MÍNIMA DE $25.00")
+                costo = 25.0
+                
+            st.success(f"Dato Facturable: {label} | TOTAL DDP: ${costo:.2f}")
+
+    with col_btn2:
+        if st.button("🧹 LIMPIAR CALCULADORA", use_container_width=True):
+            st.session_state.clean_manual += 1
+            st.rerun()
