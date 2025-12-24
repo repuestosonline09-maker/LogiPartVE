@@ -83,14 +83,14 @@ with col3: n_in = st.text_input("Número de Parte", key=f"n_{st.session_state.co
 with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
 with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 5. MOTOR DE INTELIGENCIA (VALIDACIÓN + CÁLCULO + RADAR DE NOTICIAS)
+# 5. MOTOR DE INTELIGENCIA (EL EXPERTO DEFINITIVO + RADAR GEOPOLÍTICO)
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary", use_container_width=True):
     if v_in and r_in and n_in:
         if o_in == "Madrid" and t_in == "Marítimo":
             st.error("⚠️ Error: Madrid solo permite envíos Aéreos.")
             st.stop()
 
-        # Selección de tarifa única (Mantenemos tu lógica blindada)
+        # Selección de tarifa única (LÓGICA BLINDADA)
         if o_in == "Miami":
             tarifa_uso = st.session_state.tarifas['mia_a'] if t_in == "Aéreo" else st.session_state.tarifas['mia_m']
             unidad_uso = "Libras (lb)" if t_in == "Aéreo" else "Pies Cúbicos (ft³)"
@@ -98,29 +98,38 @@ if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary",
             tarifa_uso = st.session_state.tarifas['mad']
             unidad_uso = "Kilogramos (kg)"
 
+        # PROMPT REESTRUCTURADO (RECUPERANDO LO ANTERIOR + RADAR REAL)
         prompt = f"""
-        ACTÚA COMO DIRECTOR DE OPERACIONES DE LogiPartVE. 
-        Tu objetivo: Cotización precisa + Diagnóstico Técnico + Radar de Riesgos.
+        ACTÚA COMO EL DIRECTOR DE OPERACIONES Y EXPERTO TÉCNICO DE LogiPartVE. 
+        Tu misión: Cotización precisa + Validación OEM/Aftermarket + Radar de Riesgo Geopolítico.
 
-        DATOS: {r_in} | {n_in} | {v_in}. Ruta: {o_in} ({t_in}). Tarifa: {tarifa_uso}.
+        DATOS: {r_in} | {n_in} | {v_in}. Ruta: {o_in} ({t_in}). Tarifa: {tarifa_uso} por {unidad_uso}.
 
-        TAREA 1: VALIDACIÓN TÉCNICA (OEM/AFTERMARKET/CROSS-REFERENCE).
-        TAREA 2: LOGÍSTICA (Peso mayor, Mínimo $25, conversión exacta).
-        
-        TAREA 3: RADAR LOGÍSTICO (SITUACIÓN REAL):
-        - RESTRICCIONES: Si la pieza es inflamable, gas (amortiguadores), frágil o sobredimensionada, indícalo en 1 sola frase.
-        - NOTICIAS: Busca eventos REALES (clima, huelgas, aduanas, geopolítica) en {o_in} y Venezuela que afecten el envío HOY.
-        
-        FORMATO DE SALIDA (ESTRICTO Y RESUMIDO PARA MÓVIL):
-        1. 🛠️ **DIAGNÓSTICO TÉCNICO**: [Validación breve]
-        2. 📦 **DETALLES DE ENVÍO**: [Empaque y peso facturable]
-        3. 💰 **COSTO TOTAL DDP**: $[Monto] USD (Todo incluido)
-        4. 📡 **RADAR LOGÍSTICO**:
-           • ⚠️ [Restricción de pieza o Aduana]
-           • 🌍 [Noticia Geopolítica/Clima relevante]
+        TAREA 1: VALIDACIÓN TÉCNICA (MODO EXPERTO):
+        - Confirma si {n_in} aplica al vehículo o es un intercambio válido (Cross-Reference). No digas "en curso", ¡TÚ LO SABES!
+        - Identifica el número OEM actual si el ingresado es antiguo.
+
+        TAREA 2: LOGÍSTICA ESTRICTA (REGLAS DE ORO):
+        - Define Largo, Ancho, Alto (cm) y Peso (kg) del empaque REFORZADO.
+        - Calcula Peso Volumétrico (LxAnxAl/5000). Usa el MAYOR entre Real y Volumétrico.
+        - Miami Aéreo: convierte a lb (x 2.20462). Miami Marítimo: usa ft³ (cm3/28316.8). Madrid: kg.
+        - REGLA DEL MÍNIMO: Si el costo total es < $25.00 USD, el COSTO TOTAL DDP debe ser $25.00 USD. 
+        - ERROR PROHIBIDO: No confundas el mínimo de $25 con el peso de la pieza.
+
+        TAREA 3: RADAR LOGÍSTICO (NOTICIAS REALES):
+        - Busca noticias CRÍTICAS de última hora (Reuters, AP, agencias de defensa): Bloqueos navales en el Caribe, huelgas de transporte, cierres de espacio aéreo o cambios en aduana de Venezuela.
+        - Menciona restricciones específicas para {r_in} (Hazmat, piezas frágiles, etc.).
+
+        FORMATO DE SALIDA (PROFESIONAL Y CONCISO):
+        🛠️ **DIAGNÓSTICO TÉCNICO**: [Validación detallada del experto]
+        📦 **DETALLES DE ENVÍO**: [Dimensiones, Peso Facturable y Unidad]
+        💰 **COSTO TOTAL DDP**: $[Monto] USD (Todo incluido puerta a puerta)
+        📡 **RADAR LOGÍSTICO Y GEOPOLÍTICO**:
+           • ⚠️ [Restricción técnica o aduanal]
+           • 🌍 [Noticia real de impacto: Bloqueos, Huelgas o Clima extremo]
         """
         
-        with st.spinner('Consultando radares y validando pieza...'):
+        with st.spinner('Validando pieza y rastreando alertas globales...'):
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
                 res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=20)
