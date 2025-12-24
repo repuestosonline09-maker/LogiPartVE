@@ -113,56 +113,72 @@ if st.button("🚀 GENERAR ANÁLISIS TÉCNICO", type="primary", use_container_wi
     else:
         st.warning("⚠️ Complete todos los campos.")
 
-# 6. CEREBRO MATEMÁTICO: CÁLCULO DE ENVÍO INDEPENDIENTE
+# 6. CEREBRO MATEMÁTICO: LÓGICA DE CÁLCULO BLINDADA (PYTHON)
 if 'raw_tecnico' in st.session_state and st.session_state.raw_tecnico:
     import re
     raw = st.session_state.raw_tecnico
     
-    # --- PROCESO DE EXTRACCIÓN DE DATOS ---
+    # 1. Extracción de datos (Limpieza de seguridad)
     try:
         veredicto = re.search(r"VERDICTO: (.*)", raw).group(1)
         dims = re.findall(r"(\d+)", re.search(r"MEDIDAS_CM: (.*)", raw).group(1))
         L, An, Al = float(dims[0]), float(dims[1]), float(dims[2])
-        P_real = float(re.search(r"PESO_KG: ([\d.]+)", raw).group(1))
+        P_real_kg = float(re.search(r"PESO_KG: ([\d.]+)", raw).group(1))
     except:
-        veredicto = "Error en formato técnico"; L, An, Al, P_real = 0,0,0,0
+        st.error("El Asesor Técnico no entregó medidas claras. Reintente.")
+        st.stop()
 
-    # --- LÓGICA DE TARIFAS (PYTHON PURO) ---
+    # 2. Lógica de cálculo (Selección de Ruta)
     vol_cm3 = L * An * Al
+    
     if o_in == "Miami" and t_in == "Marítimo":
+        # MARÍTIMO: Pies Cúbicos (Fórmula: cm3 / 28316.8)
         facturable = vol_cm3 / 28316.8
+        u_simbolo = "ft³"
         tarifa_v = st.session_state.tarifas['mia_m']
-        u = "ft³"
+        costo_bruto = facturable * tarifa_v
+        detalle_factura = f"{round(facturable, 2)} ft³"
+
     elif o_in == "Miami" and t_in == "Aéreo":
-        p_vol = vol_cm3 / 5000
-        facturable = max(P_real, p_vol) * 2.20462
+        # MIAMI AÉREO: Libras (Mayor entre kg Real y kg Volumétrico)
+        p_vol_kg = vol_cm3 / 5000
+        p_mayor_kg = max(P_real_kg, p_vol_kg)
+        facturable_lb = p_mayor_kg * 2.20462
+        u_simbolo = "lb"
         tarifa_v = st.session_state.tarifas['mia_a']
-        u = "lb"
-    else: # Madrid
-        p_vol = vol_cm3 / 5000
-        facturable = max(P_real, p_vol)
+        costo_bruto = facturable_lb * tarifa_v
+        detalle_factura = f"{round(facturable_lb, 2)} lb"
+
+    else: # MADRID VENEZUELA
+        # MADRID: Kilos (Mayor entre kg Real y kg Volumétrico)
+        p_vol_kg = vol_cm3 / 5000
+        p_mayor_kg = max(P_real_kg, p_vol_kg)
+        u_simbolo = "kg"
         tarifa_v = st.session_state.tarifas['mad']
-        u = "kg"
+        costo_bruto = p_mayor_kg * tarifa_v
+        detalle_factura = f"{round(p_mayor_kg, 2)} kg"
 
-    costo_final = max(25.0, facturable * tarifa_v)
+    # 3. Aplicación de la Regla de Oro del Mínimo
+    costo_final = max(25.0, costo_bruto)
+    nota_minimo = " (Tarifa mínima aplicada)" if costo_bruto < 25.0 else ""
 
-    # --- MOSTRAR RESULTADOS SEPARADOS ---
+    # --- DISEÑO DE SALIDA (Limpio y Profesional) ---
     st.markdown("---")
-    st.subheader("📋 Resultado de la Auditoría")
+    st.subheader("📋 Cotización Final de Envío")
     
-    col_izq, col_der = st.columns([2, 1])
+    res_1, res_2 = st.columns([2, 1])
     
-    with col_izq:
+    with res_1:
         st.markdown(f"**Análisis Técnico:**\n{veredicto}")
+        st.write(f"**Configuración Logística:** {L}x{An}x{Al} cm | {P_real_kg} kg")
+        st.write(f"**Cálculo:** {detalle_factura} x ${tarifa_v}")
     
-    with col_der:
-        st.metric("Costo Total DDP", f"${costo_final:.2f} USD")
-        if (facturable * tarifa_v) < 25.0:
-            st.caption("⚠️ Tarifa mínima aplicada")
+    with res_2:
+        st.metric("COSTO DDP", f"${costo_final:.2f}")
+        if nota_minimo:
+            st.warning(nota_minimo)
 
-    st.write(f"**Detalle Logístico:** {L}x{An}x{Al} cm | {P_real} kg | Facturable: {round(facturable, 2)} {u}")
-    
-    if st.button("🗑️ NUEVA CONSULTA"):
+    if st.button("🗑️ NUEVA COTIZACIÓN"):
         st.session_state.raw_tecnico = ""
         st.rerun()
 
