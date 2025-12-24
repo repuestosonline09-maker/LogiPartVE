@@ -152,20 +152,21 @@ if st.session_state.resultado_ia:
 
 st.markdown("---")
 
-# 7. CALCULADORA MANUAL INDEPENDIENTE (CON SELECTORES PROPIOS)
+# 7. CALCULADORA MANUAL INDEPENDIENTE (CON RESETEO A MIAMI AÉREO)
 with st.expander("📊 CALCULADORA MANUAL INDEPENDIENTE"):
     st.write("Realice cálculos rápidos sin afectar la cotización de la IA.")
     
-    # 7.1 Selectores de control propios de la tabla
+    # 7.1 Selectores de control propios con valores por defecto
     c1, c2 = st.columns(2)
     with c1:
-        origen_m = st.selectbox("Origen del Envío", ["Miami", "Madrid"], key="origen_manual")
+        # Miami es el índice 0
+        origen_m = st.selectbox("Origen del Envío", ["Miami", "Madrid"], index=0, key=f"or_manual_{st.session_state.clean_manual}")
     with c2:
-        # Si es Madrid, solo permitimos Aéreo por lógica de negocio
+        # Aéreo es el índice 0
         opciones_envio = ["Aéreo"] if origen_m == "Madrid" else ["Aéreo", "Marítimo"]
-        tipo_m = st.selectbox("Tipo de Envío", opciones_envio, key="tipo_manual")
+        tipo_m = st.selectbox("Tipo de Envío", opciones_envio, index=0, key=f"ti_manual_{st.session_state.clean_manual}")
 
-    # 7.2 Campos de dimensiones
+    # 7.2 Campos de dimensiones con reset
     if 'clean_manual' not in st.session_state:
         st.session_state.clean_manual = 0
 
@@ -181,24 +182,18 @@ with st.expander("📊 CALCULADORA MANUAL INDEPENDIENTE"):
         if st.button("🧮 CALCULAR AHORA", use_container_width=True):
             vol_cm3 = l_cm * an_cm * al_cm
             
-            # LÓGICA INDEPENDIENTE POR RUTA
             if origen_m == "Miami" and tipo_m == "Marítimo":
-                # Marítimo: Pies Cúbicos
                 ft3 = vol_cm3 / 28316.8
                 costo_base = ft3 * st.session_state.tarifas['mia_m']
                 dato_facturable = f"{ft3:.2f} ft³"
                 tarifa_aplicada = st.session_state.tarifas['mia_m']
-            
             elif origen_m == "Madrid":
-                # Madrid: Kilos (Mayor entre Real y Volumétrico)
                 p_vol = vol_cm3 / 5000
                 p_mayor = max(p_kg_in, p_vol)
                 costo_base = p_mayor * st.session_state.tarifas['mad']
                 dato_facturable = f"{p_mayor:.2f} kg"
                 tarifa_aplicada = st.session_state.tarifas['mad']
-            
             else: # Miami Aéreo
-                # Miami Aéreo: Libras (Mayor entre Real y Volumétrico)
                 p_vol = vol_cm3 / 5000
                 p_mayor_kg = max(p_kg_in, p_vol)
                 p_libras = p_mayor_kg * 2.20462
@@ -206,7 +201,6 @@ with st.expander("📊 CALCULADORA MANUAL INDEPENDIENTE"):
                 dato_facturable = f"{p_libras:.2f} lb"
                 tarifa_aplicada = st.session_state.tarifas['mia_a']
 
-            # VALIDACIÓN DE TARIFA MÍNIMA
             if costo_base < 25.0:
                 total_final = 25.0
                 st.warning(f"⚠️ El monto calculado (${costo_base:.2f}) no alcanza el mínimo. Se cobrarán $25.00")
@@ -214,15 +208,10 @@ with st.expander("📊 CALCULADORA MANUAL INDEPENDIENTE"):
                 total_final = costo_base
                 st.success("✅ Cálculo procesado correctamente")
 
-            st.markdown(f"""
-            **RESULTADO DE OPERACIÓN:**
-            * **Ruta:** {origen_m} vía {tipo_m}
-            * **Tarifa base:** ${tarifa_aplicada}
-            * **Medida Facturable:** {dato_facturable}
-            * **TOTAL DDP:** ${total_final:.2f}
-            """)
+            st.markdown(f"**TOTAL DDP ({origen_m} {tipo_m}): ${total_final:.2f}**")
 
     with col_btn2:
         if st.button("🧹 LIMPIAR TABLA", use_container_width=True):
+            # Aumentar el contador cambia los keys de los selectores, forzándolos al 'index=0'
             st.session_state.clean_manual += 1
             st.rerun()
