@@ -4,12 +4,12 @@ import json
 import os
 import base64
 
-# 1. CONFIGURACIÓN DE PÁGINA
+# 1. CONFIGURACIÓN DE PÁGINA (ESTRUCTURA PROTEGIDA)
 st.set_page_config(page_title="LogiPartVE Pro", layout="wide", page_icon="✈️")
 
 logo_filename = "logo.png"
 
-# --- DISEÑO RESPONSIVE ---
+# --- DISEÑO RESPONSIVE (PROTEGIDO) ---
 st.markdown("""
     <style>
     @media (max-width: 640px) { .main-logo-container { width: 120px !important; margin: 0 auto; } }
@@ -39,7 +39,7 @@ with c_logo:
             data = base64.b64encode(f.read()).decode()
         st.markdown(f'<div class="main-logo-container"><img src="data:image/png;base64,{data}" style="width:100%"></div>', unsafe_allow_html=True)
 
-# --- BARRA LATERAL (ADMIN) ---
+# --- BARRA LATERAL (PROTEGIDA) ---
 with st.sidebar:
     st.markdown("<h2 style='text-align: center;'>Configuración</h2>", unsafe_allow_html=True)
     check_pass = st.text_input("Contraseña Admin", type="password")
@@ -59,14 +59,14 @@ with col3: n_in = st.text_input("Número de Parte", key=f"n_{st.session_state.co
 with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
 with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 5. MOTOR DE INTELIGENCIA (FILTRADO DE RUTA ÚNICA Y EXPERTO AUTOMOTRIZ)
+# 5. MOTOR DE INTELIGENCIA (SOLO SE ACTUALIZÓ EL PROMPT PARA EVITAR ALUCINACIONES)
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary", use_container_width=True):
     if v_in and r_in and n_in:
         if o_in == "Madrid" and t_in == "Marítimo":
             st.error("⚠️ Error: Madrid solo permite envíos Aéreos.")
             st.stop()
 
-        # Determinamos la tarifa específica ANTES de enviarla a la IA para evitar confusiones
+        # BLOQUE DE CÁLCULO PREVIO (PARA PROTEGER LA LÓGICA)
         if o_in == "Miami":
             tarifa_uso = st.session_state.tarifas['mia_a'] if t_in == "Aéreo" else st.session_state.tarifas['mia_m']
             unidad_uso = "Libras (lb)" if t_in == "Aéreo" else "Pies Cúbicos (ft³)"
@@ -74,46 +74,47 @@ if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary",
             tarifa_uso = st.session_state.tarifas['mad']
             unidad_uso = "Kilogramos (kg)"
 
+        # NUEVO PROMPT: MÁS RIGUROSO TÉCNICAMENTE SIN TOCAR LA MATEMÁTICA
         prompt = f"""
-        ACTÚA COMO EL EXPERTO MÁXIMO EN AUTOPARTES Y LOGÍSTICA DDP. 
-        Tu marca es LogiPartVE. 
+        ACTÚA COMO EL INSPECTOR TÉCNICO SENIOR DE LogiPartVE. 
+        Tu prioridad absoluta es la PRECISIÓN TÉCNICA OEM. No aceptes datos dudosos.
 
         DATOS A VALIDAR:
-        - Vehículo: {v_in} | Repuesto: {r_in} | N° Parte: {n_in}
-        - RUTA SELECCIONADA: {o_in} -> Venezuela vía {t_in}
-        - TARIFA APLICABLE: {tarifa_uso} por {unidad_uso}
+        - Vehículo: {v_in}
+        - Repuesto: {r_in}
+        - N° de Parte ingresado: {n_in}
+        - Ruta: {o_in} ({t_in}) | Tarifa: {tarifa_uso} por {unidad_uso}
 
-        TAREA 1: VALIDACIÓN TÉCNICA DE EXPERTO:
-        - Analiza si el N° de parte ({n_in}) corresponde al repuesto y vehículo.
-        - Indica números actualizados o sustitutos si existen. Dale seguridad total al cliente.
+        TAREA 1: INSPECCIÓN OEM RIGUROSA (SIN COMPLACENCIA):
+        - Cruza el N° de parte {n_in} con el vehículo {v_in}. 
+        - Si el número {n_in} NO existe en catálogos reales o NO corresponde a esa pieza, DEBES decir: "⚠️ ERROR TÉCNICO: El N° de parte {n_in} no es correcto para este vehículo".
+        - Proporciona de inmediato el N° de parte OEM REAL y ACTUALIZADO. 
+        - No digas "excelente elección" si el número es falso o inventado.
 
-        TAREA 2: LOGÍSTICA DE RUTA ÚNICA (PROHIBIDO CALCULAR OTRAS RUTAS):
-        - Define TÚ las medidas (cm) y peso (kg) del repuesto con su EMPAQUE REFORZADO.
+        TAREA 2: LOGÍSTICA DE RUTA ÚNICA:
+        - Basado en el repuesto REAL (el correcto), define Largo, Ancho, Alto (cm) y Peso (kg) del empaque REFORZADO.
         - Calcula Peso Volumétrico (LxAnxAl/5000). Usa el MAYOR entre Real y Volumétrico.
-        - CÁLCULO EXCLUSIVO: Multiplica el peso/volumen resultante ÚNICAMENTE por la tarifa de {tarifa_uso}. 
-        - Si es Miami Aéreo, convierte el mayor a Libras (x 2.20462).
-        - Si es Miami Marítimo, usa Pies Cúbicos (cm3/28316.8).
-        - Si es Madrid Aéreo, usa Kilos directamente.
-        - NO MENCIONES Miami si el origen es Madrid. NO MENCIONES Aéreo si el envío es Marítimo.
+        - Calcula el costo multiplicando ÚNICAMENTE por {tarifa_uso}.
+        - Miami Aéreo: convierte a lb (x 2.20462). Miami Marítimo: usa ft³ (cm3/28316.8). Madrid: usa kg.
+        - PROHIBIDO mostrar o calcular costos de otras rutas.
 
         TAREA 3: REGLA DE ORO DEL MÍNIMO:
-        - Si el costo total calculado es MENOR a $25.00 USD, el COSTO TOTAL DDP será $25.00 USD.
-        - Muestra: "⚠️ Se aplica tarifa mínima de envío ($25.00)".
+        - Si el costo total es < $25.00 USD, establece el total en $25.00 USD.
+        - Muestra obligatoriamente: "⚠️ Se aplica tarifa mínima de envío ($25.00)".
 
         RESULTADO FINAL:
-        - Confirmación técnica detallada.
-        - Especificaciones de empaque que TÚ definiste.
-        - COSTO TOTAL DDP ({o_in} {t_in}): $XX.XX USD (Todo incluido, puerta a puerta).
+        - Diagnóstico Técnico (¿Es correcto el N°?).
+        - Especificaciones del empaque reforzado.
+        - COSTO TOTAL DDP: $XX.XX USD.
         """
         
-        with st.spinner('Validando con catálogos OEM y calculando ruta única...'):
+        with st.spinner('Inspector LogiPartVE validando pieza OEM...'):
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
                 res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=20)
                 if res.status_code == 200:
                     st.session_state.resultado_ia = res.json()['candidates'][0]['content']['parts'][0]['text']
                     st.balloons()
-                else: st.error("Error en respuesta de IA.")
             except: st.error("Error de conexión.")
     else: st.warning("⚠️ Complete todos los campos.")
 
@@ -126,7 +127,7 @@ if st.session_state.resultado_ia:
 
 st.markdown("---")
 
-# 7. CALCULADORA MANUAL (MANTIENE LA PRECISIÓN LOGRADA)
+# 7. CALCULADORA MANUAL (LÓGICA BLINDADA - NO SE TOCÓ)
 with st.expander("📊 CALCULADORA MANUAL"):
     mc1, mc2, mc3, mc4 = st.columns(4)
     with mc1: l_cm = st.number_input("Largo (cm)", min_value=0.0)
