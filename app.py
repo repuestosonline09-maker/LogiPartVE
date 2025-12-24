@@ -83,82 +83,87 @@ with col3: n_in = st.text_input("Número de Parte", key=f"n_{st.session_state.co
 with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
 with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 5. MOTOR DE INTELIGENCIA (CÁLCULO EXACTO EN PYTHON + VALIDACIÓN IA)
-if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary", use_container_width=True):
+# 5. CEREBRO TÉCNICO: EL ASESOR DE REPUESTOS
+if st.button("🚀 GENERAR ANÁLISIS TÉCNICO", type="primary", use_container_width=True):
     if v_in and r_in and n_in:
-        if o_in == "Madrid" and t_in == "Marítimo":
-            st.error("⚠️ Error: Madrid solo permite envíos Aéreos.")
-            st.stop()
+        prompt_tecnico = f"""
+        ERES UN PERITO TÉCNICO AUTOMOTRIZ OEM.
+        TU MISIÓN: Validar compatibilidad y definir medidas físicas de empaque.
+        
+        DATOS: {r_in} | {n_in} | {v_in}.
 
-        # Selección de tarifa base
-        tarifa_actual = st.session_state.tarifas['mia_a'] if o_in == "Miami" and t_in == "Aéreo" else \
-                        st.session_state.tarifas['mia_m'] if o_in == "Miami" and t_in == "Marítimo" else \
-                        st.session_state.tarifas['mad']
-        
-        unidad = "lb" if (o_in == "Miami" and t_in == "Aéreo") else "ft³" if t_in == "Marítimo" else "kg"
+        1. AUDITORÍA: Verifica si el N° {n_in} pertenece a {r_in} para {v_in}. 
+           - Si el número es inventado o de otro auto: Reporta "❌ ERROR CRÍTICO".
+        2. MEDIDAS: Define Largo, Ancho, Alto (cm) y Peso (kg) del empaque REFORZADO.
 
-        # Prompt enfocado en MEDIDAS y VALIDACIÓN (No en el cálculo final)
-        prompt = f"""
-        ERES EL PERITO TÉCNICO DE LogiPartVE. 
-        
-        TAREA 1: VALIDAR {n_in} para {v_in} ({r_in}). Si es falso, indica "❌ ERROR DE COMPATIBILIDAD".
-        TAREA 2: Define medidas (L, An, Al en cm) y peso (kg) de un empaque REFORZADO para un {r_in}.
-        
-        ENTREGA TU RESPUESTA SIGUIENDO ESTE ESQUEMA EXACTO:
-        DIAGNOSTICO: [Tu veredicto técnico]
-        MEDIDAS: [L]x[An]x[Al] cm
-        PESO_KG: [Valor en kg]
+        RESPONDE EXCLUSIVAMENTE ASÍ:
+        VERDICTO: [Tu análisis técnico aquí]
+        MEDIDAS_CM: [L]x[An]x[Al]
+        PESO_KG: [Valor]
         """
-        
-        with st.spinner('Perito LogiPartVE auditando...'):
+        with st.spinner('El Asesor Técnico está verificando la pieza...'):
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
-                res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=20)
-                
+                res = requests.post(url, json={"contents": [{"parts": [{"text": prompt_tecnico}]}]}, timeout=20)
                 if res.status_code == 200:
-                    respuesta = res.json()['candidates'][0]['content']['parts'][0]['text']
-                    
-                    # --- CÁLCULO MATEMÁTICO REAL EN PYTHON (NO ALUCINA) ---
-                    # Extraemos datos básicos que la IA propuso (o usamos defaults si falla)
-                    import re
-                    try:
-                        dims = re.findall(r"(\d+)", re.search(r"MEDIDAS: (.*)", respuesta).group(1))
-                        L, An, Al = float(dims[0]), float(dims[1]), float(dims[2])
-                        P_real = float(re.search(r"PESO_KG: ([\d.]+)", respuesta).group(1))
-                    except:
-                        L, An, Al, P_real = 30.0, 30.0, 30.0, 2.0 # Fallback seguridad
-                    
-                    # Lógica de cálculo según ruta
-                    volumen_cm3 = L * An * Al
-                    if o_in == "Miami" and t_in == "Marítimo":
-                        facturable = volumen_cm3 / 28316.8
-                    elif o_in == "Miami" and t_in == "Aéreo":
-                        p_vol = volumen_cm3 / 5000
-                        facturable = max(P_real, p_vol) * 2.20462
-                    else: # Madrid
-                        p_vol = volumen_cm3 / 5000
-                        facturable = max(P_real, p_vol)
-
-                    costo_final = max(25.0, facturable * tarifa_actual)
-                    
-                    # Formatear el resultado final para mostrar al usuario
-                    st.session_state.resultado_ia = f"""
-                    🛠️ **DIAGNÓSTICO TÉCNICO**: {re.search(r"DIAGNOSTICO: (.*)", respuesta).group(1)}
-                    📦 **DETALLES DE ENVÍO**: {L}x{An}x{Al} cm | Facturable: {round(facturable, 2)} {unidad}
-                    💰 **COSTO TOTAL DDP**: ${round(costo_final, 2)} USD (Todo incluido vía {o_in} {t_in})
-                    """
-                    st.balloons()
-            except Exception as e:
-                st.error(f"Error en motor de cálculo: {e}")
+                    # Guardamos la respuesta técnica pura
+                    st.session_state.raw_tecnico = res.json()['candidates'][0]['content']['parts'][0]['text']
+                else: st.error("Error en el Asesor Técnico.")
+            except: st.error("Sin conexión al Asesor.")
     else:
         st.warning("⚠️ Complete todos los campos.")
 
-# 6. RESULTADOS
-if st.session_state.resultado_ia:
-    st.info(st.session_state.resultado_ia)
-    if st.button("🗑️ NUEVA CONSULTA", use_container_width=True):
-        st.session_state.count += 1
-        st.session_state.resultado_ia = ""
+# 6. CEREBRO MATEMÁTICO: CÁLCULO DE ENVÍO INDEPENDIENTE
+if 'raw_tecnico' in st.session_state and st.session_state.raw_tecnico:
+    import re
+    raw = st.session_state.raw_tecnico
+    
+    # --- PROCESO DE EXTRACCIÓN DE DATOS ---
+    try:
+        veredicto = re.search(r"VERDICTO: (.*)", raw).group(1)
+        dims = re.findall(r"(\d+)", re.search(r"MEDIDAS_CM: (.*)", raw).group(1))
+        L, An, Al = float(dims[0]), float(dims[1]), float(dims[2])
+        P_real = float(re.search(r"PESO_KG: ([\d.]+)", raw).group(1))
+    except:
+        veredicto = "Error en formato técnico"; L, An, Al, P_real = 0,0,0,0
+
+    # --- LÓGICA DE TARIFAS (PYTHON PURO) ---
+    vol_cm3 = L * An * Al
+    if o_in == "Miami" and t_in == "Marítimo":
+        facturable = vol_cm3 / 28316.8
+        tarifa_v = st.session_state.tarifas['mia_m']
+        u = "ft³"
+    elif o_in == "Miami" and t_in == "Aéreo":
+        p_vol = vol_cm3 / 5000
+        facturable = max(P_real, p_vol) * 2.20462
+        tarifa_v = st.session_state.tarifas['mia_a']
+        u = "lb"
+    else: # Madrid
+        p_vol = vol_cm3 / 5000
+        facturable = max(P_real, p_vol)
+        tarifa_v = st.session_state.tarifas['mad']
+        u = "kg"
+
+    costo_final = max(25.0, facturable * tarifa_v)
+
+    # --- MOSTRAR RESULTADOS SEPARADOS ---
+    st.markdown("---")
+    st.subheader("📋 Resultado de la Auditoría")
+    
+    col_izq, col_der = st.columns([2, 1])
+    
+    with col_izq:
+        st.markdown(f"**Análisis Técnico:**\n{veredicto}")
+    
+    with col_der:
+        st.metric("Costo Total DDP", f"${costo_final:.2f} USD")
+        if (facturable * tarifa_v) < 25.0:
+            st.caption("⚠️ Tarifa mínima aplicada")
+
+    st.write(f"**Detalle Logístico:** {L}x{An}x{Al} cm | {P_real} kg | Facturable: {round(facturable, 2)} {u}")
+    
+    if st.button("🗑️ NUEVA CONSULTA"):
+        st.session_state.raw_tecnico = ""
         st.rerun()
 
 st.markdown("---")
