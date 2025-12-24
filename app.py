@@ -112,57 +112,51 @@ if st.button("🚀 GENERAR ANÁLISIS TÉCNICO", type="primary", use_container_wi
     else:
         st.warning("⚠️ Complete todos los campos.")
 
-# 6. CEREBRO MATEMÁTICO (EXTRACCIÓN FLEXIBLE)
+# 6. CEREBRO MATEMÁTICO: LÓGICA FINAL Y DISEÑO PROFESIONAL
 if 'raw_tecnico' in st.session_state and st.session_state.raw_tecnico:
     import re
     raw = st.session_state.raw_tecnico
     
     try:
-        # Buscamos el veredicto
+        # 1. Extracción de datos del Asesor (Cerebro 1)
         veredicto_match = re.search(r"VERDICTO:\s*(.*)", raw, re.IGNORECASE)
-        veredicto = veredicto_match.group(1) if veredicto_match else "Análisis disponible."
+        veredicto = veredicto_match.group(1) if veredicto_match else "Análisis técnico procesado."
         
-        # Buscamos la línea de datos físicos y extraemos todos los números encontrados en ella
         datos_linea = re.search(r"DATOS_FISICOS:\s*(.*)", raw, re.IGNORECASE).group(1)
         numeros = re.findall(r"[\d.]+", datos_linea)
         
-        # Asignamos: Largo, Ancho, Alto, Peso
-        L = float(numeros[0])
-        An = float(numeros[1])
-        Al = float(numeros[2])
-        P_fisico = float(numeros[3])
+        L, An, Al, P_fisico = float(numeros[0]), float(numeros[1]), float(numeros[2]), float(numeros[3])
         
-        # --- Lógica de cálculo (La misma que ya perfeccionamos) ---
+        # 2. Lógica Matemática (Cerebro 2 - Python)
         vol_cm3 = L * An * Al
+        
         if o_in == "Miami" and t_in == "Marítimo":
             facturable = vol_cm3 / 28316.8
-            tarifa_v = st.session_state.tarifas['mia_m']
             u = "ft³"
+            tarifa_v = st.session_state.tarifas['mia_m']
         elif o_in == "Miami" and t_in == "Aéreo":
             p_vol = vol_cm3 / 5000
             facturable = max(P_fisico, p_vol) * 2.20462
-            tarifa_v = st.session_state.tarifas['mia_a']
             u = "lb"
-        else: # Madrid
+            tarifa_v = st.session_state.tarifas['mia_a']
+        else: # Madrid Aéreo
             p_vol = vol_cm3 / 5000
             facturable = max(P_fisico, p_vol)
-            tarifa_v = st.session_state.tarifas['mad']
             u = "kg"
+            tarifa_v = st.session_state.tarifas['mad']
 
-        costo_final = max(25.0, facturable * tarifa_v)
+        # Definimos costo_bruto para evitar el error anterior
+        costo_bruto = facturable * tarifa_v
+        costo_final = max(25.0, costo_bruto)
 
-        # --- DISEÑO DE SALIDA PROFESIONAL ---
+        # 3. Diseño de Salida con el Diagnóstico Resaltado
         st.markdown("---")
-        
-        # Título con icono de seguridad
         st.markdown("### 🔍 INFORME DE AUDITORÍA Y COTIZACIÓN")
 
-        # RECUADRO DE RESALTE PARA EL ASESOR (Cerebro 1)
-        with st.container(border=True):
-            st.markdown("##### 🛠️ Diagnóstico del Asesor Técnico")
-            st.info(veredicto) # El texto del asesor aparece en un recuadro azul profesional
+        # Recuadro resaltado para el diagnóstico técnico
+        st.info(f"**🛠️ DIAGNÓSTICO DEL ASESOR TÉCNICO:**\n\n{veredicto}")
 
-        # BLOQUE DE COSTOS Y LOGÍSTICA (Cerebro 2)
+        # Bloque de logística y costos
         c1, c2 = st.columns([1.5, 1])
         
         with c1:
@@ -175,21 +169,16 @@ if 'raw_tecnico' in st.session_state and st.session_state.raw_tecnico:
             st.markdown("##### 💰 Inversión DDP")
             st.metric(label="TOTAL A PAGAR", value=f"${round(costo_final, 2)} USD")
             if costo_bruto < 25.0:
-                st.caption("⚠️ Incluye tarifa mínima de gestión")
+                st.warning("⚠️ Tarifa mínima aplicada ($25.00)")
 
         st.markdown(f"*(Operación puerta a puerta vía {o_in} {t_in} sin cargos ocultos)*")
+        
+        if st.button("🗑️ NUEVA COTIZACIÓN", use_container_width=True):
+            st.session_state.raw_tecnico = ""
+            st.rerun()
 
     except Exception as e:
-        st.error(f"⚠️ Error de lectura: El Asesor Técnico entregó un formato inesperado. (Detalle: {e})")
-        
-        c1, c2 = st.columns(2)
-        c1.write(f"**Detalle Físico:** {L}x{An}x{Al} cm | {P_fisico} kg")
-        c1.write(f"**Facturable:** {round(facturable, 2)} {u}")
-        c2.metric("TOTAL DDP", f"${round(costo_final, 2)} USD")
-        
-    except Exception as e:
-        st.error(f"⚠️ Error de lectura: La IA cambió el formato. Intente de nuevo. (Detalle: {e})")
-
+        st.error(f"⚠️ Error de lectura: El Asesor entregó un formato inesperado. (Detalle: {e})")
 st.markdown("---")
 
 # 7. CALCULADORA MANUAL INDEPENDIENTE (CON RESETEO A MIAMI AÉREO)
