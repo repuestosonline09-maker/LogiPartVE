@@ -59,48 +59,54 @@ with col3: n_in = st.text_input("Número de Parte", key=f"n_{st.session_state.co
 with col4: o_in = st.selectbox("Origen", ["Miami", "Madrid"], key=f"o_{st.session_state.count}")
 with col5: t_in = st.selectbox("Envío", ["Aéreo", "Marítimo"], key=f"t_{st.session_state.count}")
 
-# 5. MOTOR DE INTELIGENCIA (EL EXPERTO AUTOMOTRIZ DEFINITIVO)
+# 5. MOTOR DE INTELIGENCIA (FILTRADO DE RUTA ÚNICA Y EXPERTO AUTOMOTRIZ)
 if st.button("🚀 GENERAR ANÁLISIS Y COTIZACIÓN PROFESIONAL", type="primary", use_container_width=True):
     if v_in and r_in and n_in:
         if o_in == "Madrid" and t_in == "Marítimo":
             st.error("⚠️ Error: Madrid solo permite envíos Aéreos.")
             st.stop()
 
+        # Determinamos la tarifa específica ANTES de enviarla a la IA para evitar confusiones
+        if o_in == "Miami":
+            tarifa_uso = st.session_state.tarifas['mia_a'] if t_in == "Aéreo" else st.session_state.tarifas['mia_m']
+            unidad_uso = "Libras (lb)" if t_in == "Aéreo" else "Pies Cúbicos (ft³)"
+        else:
+            tarifa_uso = st.session_state.tarifas['mad']
+            unidad_uso = "Kilogramos (kg)"
+
         prompt = f"""
         ACTÚA COMO EL EXPERTO MÁXIMO EN AUTOPARTES Y LOGÍSTICA DDP. 
-        Tu marca es LogiPartVE. Tienes conocimiento total de catálogos OEM, números de parte, sustitutos (superseded) y terminología técnica en cualquier idioma.
+        Tu marca es LogiPartVE. 
 
         DATOS A VALIDAR:
-        - Vehículo: {v_in}
-        - Repuesto escrito por usuario: {r_in}
-        - Número de Parte: {n_in}
-        - Ruta: {o_in} vía {t_in}
-        - Tarifas: {st.session_state.tarifas}
+        - Vehículo: {v_in} | Repuesto: {r_in} | N° Parte: {n_in}
+        - RUTA SELECCIONADA: {o_in} -> Venezuela vía {t_in}
+        - TARIFA APLICABLE: {tarifa_uso} por {unidad_uso}
 
         TAREA 1: VALIDACIÓN TÉCNICA DE EXPERTO:
-        - Analiza si el N° de parte ({n_in}) corresponde realmente al repuesto y al vehículo ({v_in}).
-        - Si el número es viejo, indica el número actualizado. 
-        - Si el nombre está en otro idioma o es ambiguo, clarifica qué pieza es exactamente.
-        - ¡Sé un asesor! Dale seguridad al cliente de que está comprando la pieza correcta.
+        - Analiza si el N° de parte ({n_in}) corresponde al repuesto y vehículo.
+        - Indica números actualizados o sustitutos si existen. Dale seguridad total al cliente.
 
-        TAREA 2: LOGÍSTICA AUTÓNOMA (NO PIDAS DATOS):
+        TAREA 2: LOGÍSTICA DE RUTA ÚNICA (PROHIBIDO CALCULAR OTRAS RUTAS):
         - Define TÚ las medidas (cm) y peso (kg) del repuesto con su EMPAQUE REFORZADO.
         - Calcula Peso Volumétrico (LxAnxAl/5000). Usa el MAYOR entre Real y Volumétrico.
-        - MIAMI AÉREO: Multiplica Libras (kg x 2.20462) por {st.session_state.tarifas['mia_a']}.
-        - MADRID AÉREO: Multiplica Kilos por {st.session_state.tarifas['mad']}.
-        - MIAMI MARÍTIMO: Multiplica Pies Cúbicos (cm3/28316.8) por {st.session_state.tarifas['mia_m']}.
+        - CÁLCULO EXCLUSIVO: Multiplica el peso/volumen resultante ÚNICAMENTE por la tarifa de {tarifa_uso}. 
+        - Si es Miami Aéreo, convierte el mayor a Libras (x 2.20462).
+        - Si es Miami Marítimo, usa Pies Cúbicos (cm3/28316.8).
+        - Si es Madrid Aéreo, usa Kilos directamente.
+        - NO MENCIONES Miami si el origen es Madrid. NO MENCIONES Aéreo si el envío es Marítimo.
 
         TAREA 3: REGLA DE ORO DEL MÍNIMO:
-        - Si el costo total calculado es MENOR a $25.00 USD, establece el total en $25.00 USD.
-        - Indica obligatoriamente: "⚠️ Se aplica tarifa mínima de envío ($25.00)".
+        - Si el costo total calculado es MENOR a $25.00 USD, el COSTO TOTAL DDP será $25.00 USD.
+        - Muestra: "⚠️ Se aplica tarifa mínima de envío ($25.00)".
 
-        RESULTADO (ESTILO PROFESIONAL Y DIRECTO):
-        - Confirmación técnica y de compatibilidad.
-        - Detalles del empaque reforzado estimado.
-        - COSTO TOTAL DDP: $XX.XX USD (Puerta a puerta, todo incluido).
+        RESULTADO FINAL:
+        - Confirmación técnica detallada.
+        - Especificaciones de empaque que TÚ definiste.
+        - COSTO TOTAL DDP ({o_in} {t_in}): $XX.XX USD (Todo incluido, puerta a puerta).
         """
         
-        with st.spinner('Validando compatibilidad técnica y calculando logística...'):
+        with st.spinner('Validando con catálogos OEM y calculando ruta única...'):
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
                 res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=20)
